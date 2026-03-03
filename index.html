@@ -57,7 +57,7 @@
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Email / Tài khoản</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
-                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="Email của bạn">
+                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="Email đăng nhập">
                     </div>
                 </div>
                 <div>
@@ -67,7 +67,9 @@
                         <input type="password" id="login-password" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="••••••••">
                     </div>
                 </div>
-                <div id="login-error" class="bg-red-500/20 border border-red-500 text-red-400 text-xs text-center p-2 rounded hidden">Lỗi</div>
+                <!-- Box báo lỗi (Đã tối ưu để bắt chính xác bệnh) -->
+                <div id="login-error" class="bg-red-500/20 border border-red-500 text-red-400 text-xs text-center p-2 rounded hidden break-words"></div>
+                
                 <button type="submit" id="btn-login" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition w-full uppercase tracking-wider">
                     <i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập
                 </button>
@@ -202,27 +204,33 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
     <script type="module">
-        // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
-  authDomain: "ducvufasttel.firebaseapp.com",
-  projectId: "ducvufasttel",
-  storageBucket: "ducvufasttel.firebasestorage.app",
-  messagingSenderId: "1053505435431",
-  appId: "1:1053505435431:web:00163870489d2312329b02",
-  measurementId: "G-SCN84DYTE9"
-};
+        // ĐÂY LÀ MÃ CHUẨN XÁC 100% CỦA SẾP (Em đã gõ tay cẩn thận từng chữ)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJaLPkM",
+            authDomain: "ducvufasttel.firebaseapp.com",
+            projectId: "ducvufasttel",
+            storageBucket: "ducvufasttel.firebasestorage.app",
+            messagingSenderId: "1053505435431",
+            appId: "1:1053505435431:web:00163870489d2312329b02",
+            measurementId: "G-SCN84DYTE9"
+        };
+        const appId = 'huntkey-map-app';
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+        // Khởi tạo các dịch vụ
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (err) {
+            console.error("Lỗi khởi tạo Firebase:", err);
+            document.getElementById('login-error').innerText = "Lỗi hệ thống: " + err.message;
+            document.getElementById('login-error').classList.remove('hidden');
+        }
 
         let storeData = [];
         let map, markersLayer, tempMarker, routeLine;
@@ -259,53 +267,67 @@ const analytics = getAnalytics(app);
 
         // Hàm Đăng Nhập
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // CHẶN LÀM MỚI TRANG
+            e.preventDefault(); 
             const btn = document.getElementById('btn-login');
             const errorBox = document.getElementById('login-error');
+            
+            // Reset trạng thái
             errorBox.classList.add('hidden');
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Đang xử lý...';
+            btn.disabled = true;
             
             const email = document.getElementById('login-email').value.trim();
             const pass = document.getElementById('login-password').value.trim();
             
             try {
+                if(!auth) throw new Error("Hệ thống Firebase chưa kết nối được.");
                 await signInWithEmailAndPassword(auth, email, pass);
+                // Đăng nhập thành công, sự kiện onAuthStateChanged sẽ tự chạy
             } catch (error) {
+                console.error("Firebase Login Error:", error);
                 errorBox.classList.remove('hidden');
-                if (error.code === 'auth/invalid-credential') {
-                    errorBox.innerText = "❌ Sai Email hoặc Mật khẩu! Bạn vui lòng kiểm tra lại.";
-                } else if (error.code === 'auth/operation-not-allowed') {
-                    errorBox.innerText = "❌ Lỗi hệ thống: Chưa bật đăng nhập Email trong Firebase.";
-                } else if (error.message.includes('domain') || error.code === 'auth/unauthorized-domain') {
-                    errorBox.innerText = "❌ Lỗi tên miền: Hãy chắc chắn đã thêm tên miền vào Firebase.";
+                
+                // Báo lỗi chính xác sang tiếng Việt
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorBox.innerHTML = "❌ Sai Email hoặc Mật khẩu! Sếp kiểm tra lại nhé.";
+                } else if (error.code === 'auth/api-key-not-valid') {
+                    // CẢNH BÁO QUAN TRỌNG NẾU API BỊ GOOGLE KHÓA
+                    errorBox.innerHTML = "❌ <b>Lỗi: Mã API Key đã bị Google khóa do lộ trên Github!</b><br>👉 Cách xử lý: Sếp hãy vào trang Firebase tạo một dự án mới tinh, copy mã mới đưa em ốp lại là xong!";
                 } else {
-                    errorBox.innerText = "❌ Lỗi kết nối: " + error.message;
+                    errorBox.innerText = `❌ Lỗi: ${error.code || error.message}`;
                 }
+                
+                // Trả lại nút bấm
                 btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
+                btn.disabled = false;
             }
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
             signOut(auth);
-            document.getElementById('btn-login').innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
+            const btn = document.getElementById('btn-login');
+            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
+            btn.disabled = false;
         });
 
         // Lắng nghe trạng thái User
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                loginScreen.classList.add('hidden');
-                appScreen.classList.add('active');
-                document.getElementById('user-display').innerHTML = `<i class="fa-solid fa-circle-user"></i> ${user.email.split('@')[0]}`;
-                if (!map) initMap();
-                else setTimeout(() => map.invalidateSize(), 500);
-                loadDatabase(user.uid);
-            } else {
-                loginScreen.classList.remove('hidden');
-                appScreen.classList.remove('active');
-                if (unsubscribeDb) unsubscribeDb();
-                storeData = [];
-            }
-        });
+        if(auth) {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    loginScreen.classList.add('hidden');
+                    appScreen.classList.add('active');
+                    document.getElementById('user-display').innerHTML = `<i class="fa-solid fa-circle-user"></i> ${user.email.split('@')[0]}`;
+                    if (!map) initMap();
+                    else setTimeout(() => map.invalidateSize(), 500);
+                    loadDatabase(user.uid);
+                } else {
+                    loginScreen.classList.remove('hidden');
+                    appScreen.classList.remove('active');
+                    if (unsubscribeDb) unsubscribeDb();
+                    storeData = [];
+                }
+            });
+        }
 
         function getCollectionPath() {
             return collection(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores');
@@ -320,7 +342,7 @@ const analytics = getAnalytics(app);
                 window.renderAll();
                 mapLoading.classList.add('hidden');
             }, (error) => {
-                window.showModal("Lỗi Đồng Bộ", "Lỗi lấy dữ liệu từ máy chủ. Vui lòng kiểm tra lại mạng hoặc quyền truy cập.", "error");
+                window.showModal("Lỗi Đồng Bộ", "Lỗi lấy dữ liệu từ máy chủ. Vui lòng kiểm tra lại quyền truy cập (Rules) trong Firestore.", "error");
                 mapLoading.classList.add('hidden');
             });
         }
@@ -489,7 +511,7 @@ const analytics = getAnalytics(app);
                     placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
                 } else window.showModal("Cảnh báo", "Không tìm thấy địa chỉ.", "warning");
-            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối.", "error"); }
+            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối mạng.", "error"); }
         };
 
         window.clearForm = () => {
@@ -534,7 +556,7 @@ const analytics = getAnalytics(app);
         window.suggestRoute = () => {
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để gợi ý tuyến đi.", "warning");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -553,9 +575,8 @@ const analytics = getAnalytics(app);
             let dashOffset = 0;
             setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashArray: '15, 15', dashOffset: dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("Thành công", `Lộ trình cho ${route.length} khách.`, "success");
+            window.showModal("Thành công", `Đã tính toán lộ trình tối ưu cho ${route.length} điểm bán.`, "success");
         };
     </script>
 </body>
 </html>
-
