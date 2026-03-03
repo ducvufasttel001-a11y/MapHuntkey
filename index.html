@@ -202,41 +202,24 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
     <script type="module">
-        // CHỈ SỬ DỤNG PHIÊN BẢN GSTATIC.COM CỦA FIREBASE CHO WEB
+        // CHỈ IMPORT ĐÚNG 3 DÒNG TỪ GSTATIC CỦA GOOGLE - KHÔNG IMPORT TỪ NGUỒN NÀO KHÁC
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // DÁN ĐOẠN CODE BẠN VỪA COPY TỪ FIREBASE VÀO NGAY DƯỚI DÒNG NÀY:
-        // (Chú ý: Code phải có dạng const firebaseConfig = { ... };)
-        // ---------------------------------------------------------
-        
-        // Import the functions you need from the SDKs you need
-
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
-  authDomain: "ducvufasttel.firebaseapp.com",
-  projectId: "ducvufasttel",
-  storageBucket: "ducvufasttel.firebasestorage.app",
-  messagingSenderId: "1053505435431",
-  appId: "1:1053505435431:web:00163870489d2312329b02",
-  measurementId: "G-SCN84DYTE9"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-        // ---------------------------------------------------------
-        // (ĐẾN ĐÂY THÔI NHÉ! BỎ CÁC DÒNG IMPORT TỪ FIREBASE/APP NẾU CÓ)
-
-
+        // MÃ CẤU HÌNH ĐÃ ĐƯỢC LẤY CHUẨN XÁC TỪ ẢNH CỦA SẾP
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
+            authDomain: "ducvufasttel.firebaseapp.com",
+            projectId: "ducvufasttel",
+            storageBucket: "ducvufasttel.firebasestorage.app",
+            messagingSenderId: "1053505435431",
+            appId: "1:1053505435431:web:00163870489d2312329b02",
+            measurementId: "G-SCN84DYTE9"
+        };
         const appId = 'huntkey-map-app';
 
+        // Khởi tạo các dịch vụ
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -274,8 +257,9 @@ const analytics = getAnalytics(app);
             document.getElementById('custom-modal').classList.add('active');
         };
 
+        // Hàm Đăng Nhập
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // CHẶN LÀM MỚI TRANG
             const btn = document.getElementById('btn-login');
             const errorBox = document.getElementById('login-error');
             errorBox.classList.add('hidden');
@@ -286,32 +270,27 @@ const analytics = getAnalytics(app);
             
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
-                // Nếu đăng nhập thành công, sự kiện onAuthStateChanged bên dưới sẽ tự động chạy
             } catch (error) {
                 errorBox.classList.remove('hidden');
                 if (error.code === 'auth/invalid-credential') {
                     errorBox.innerText = "❌ Sai Email hoặc Mật khẩu! Bạn vui lòng kiểm tra lại.";
                 } else if (error.code === 'auth/operation-not-allowed') {
                     errorBox.innerText = "❌ Lỗi hệ thống: Chưa bật đăng nhập Email trong Firebase.";
-                } else if (error.code === 'auth/api-key-not-valid') {
-                    errorBox.innerText = "❌ Lỗi: Mã kết nối máy chủ (API Key) không hợp lệ. Vui lòng copy lại mã từ Firebase.";
                 } else if (error.message.includes('domain') || error.code === 'auth/unauthorized-domain') {
                     errorBox.innerText = "❌ Lỗi tên miền: Hãy chắc chắn đã thêm tên miền vào Firebase.";
                 } else {
                     errorBox.innerText = "❌ Lỗi kết nối: " + error.message;
                 }
-                // Chuyển nút về trạng thái ban đầu nếu có lỗi
                 btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
             }
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
             signOut(auth);
-            // Reset giao diện nút đăng nhập khi đăng xuất
-            const btn = document.getElementById('btn-login');
-            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
+            document.getElementById('btn-login').innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
         });
 
+        // Lắng nghe trạng thái User
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 loginScreen.classList.add('hidden');
@@ -510,7 +489,7 @@ const analytics = getAnalytics(app);
                     placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
                 } else window.showModal("Cảnh báo", "Không tìm thấy địa chỉ.", "warning");
-            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối mạng.", "error"); }
+            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối.", "error"); }
         };
 
         window.clearForm = () => {
@@ -555,7 +534,7 @@ const analytics = getAnalytics(app);
         window.suggestRoute = () => {
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để gợi ý tuyến đi.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ.", "warning");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -574,10 +553,8 @@ const analytics = getAnalytics(app);
             let dashOffset = 0;
             setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashArray: '15, 15', dashOffset: dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("Thành công", `Đã tính toán lộ trình tối ưu cho ${route.length} điểm bán.`, "success");
+            window.showModal("Thành công", `Lộ trình cho ${route.length} khách.`, "success");
         };
     </script>
 </body>
 </html>
-
-
