@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huntkey Route Manager v2.0</title>
+    <title>Huntkey Route Manager v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -50,7 +50,7 @@
         <div class="login-box text-center">
             <div class="text-emerald-400 text-5xl mb-4"><i class="fa-solid fa-shield-halved"></i></div>
             <h2 class="text-2xl font-bold text-white mb-2 uppercase tracking-widest">Huntkey System</h2>
-            <p class="text-slate-400 text-sm mb-6">Đăng nhập để truy cập dữ liệu quản trị (Phiên bản 2.0)</p>
+            <p class="text-slate-400 text-sm mb-6">Đăng nhập (Phiên bản 3.0 - Đã Fix API)</p>
             
             <form id="login-form" class="flex flex-col gap-4 text-left">
                 <div>
@@ -206,9 +206,9 @@
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // MÃ API CHUẨN XÁC 100% THEO ĐÚNG ẢNH SẾP CHỤP
+        // MÃ API ĐÃ ĐƯỢC COPY CHUẨN XÁC 100% TỪ BẢN GỐC CỦA SẾP
         const firebaseConfig = {
-            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJaLPkM",
+            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
             authDomain: "ducvufasttel.firebaseapp.com",
             projectId: "ducvufasttel",
             storageBucket: "ducvufasttel.firebasestorage.app",
