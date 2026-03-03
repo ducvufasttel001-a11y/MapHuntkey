@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Trị Huntkey</title>
+    <title>Huntkey Route Manager - Cloud Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: white; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        #login-screen { position: fixed; inset: 0; background-color: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 9999; background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); }
-        .login-box { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid #334155; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        
-        #app-screen { display: none; height: 100vh; flex-direction: column; padding: 16px; }
-        #app-screen.active { display: flex; }
+        #app-screen { display: flex; height: 100vh; flex-direction: column; padding: 16px; }
         
         #map { flex-grow: 1; width: 100%; border-radius: 0.5rem; z-index: 1; cursor: crosshair; }
         .leaflet-popup-content-wrapper { background-color: #1e293b; color: white; border: 1px solid #334155; }
@@ -39,118 +35,117 @@
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
+        /* Modal Notification */
         #custom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; }
         #custom-modal.active { display: flex; }
+
+        /* Loading overlay */
+        #loading-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
     </style>
 </head>
 <body>
 
-    <!-- MÀN HÌNH ĐĂNG NHẬP -->
-    <div id="login-screen">
-        <div class="login-box text-center">
-            <div class="text-emerald-400 text-5xl mb-4"><i class="fa-solid fa-shield-halved"></i></div>
-            <h2 class="text-2xl font-bold text-white mb-2 uppercase tracking-widest">HỆ THỐNG HUNTKEY</h2>
-            <p class="text-slate-400 text-sm mb-6">Đăng nhập để truy cập dữ liệu quản trị</p>
-            
-            <form id="login-form" class="flex flex-col gap-4 text-left">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">Email / Tài khoản</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
-                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="Email đăng nhập">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">Mật khẩu</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
-                        <input type="password" id="login-password" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="••••••••">
-                    </div>
-                </div>
-                <!-- Box báo lỗi (Đã tối ưu để bắt chính xác bệnh) -->
-                <div id="login-error" class="bg-red-500/20 border border-red-500 text-red-400 text-xs text-center p-2 rounded hidden break-words"></div>
-                
-                <button type="submit" id="btn-login" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition w-full uppercase tracking-wider">
-                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập
-                </button>
-            </form>
-            <p class="text-xs text-slate-500 mt-6">Phần mềm quản trị nội bộ dành riêng cho Fasttel.</p>
-        </div>
+    <!-- MÀN HÌNH CHỜ KẾT NỐI -->
+    <div id="loading-overlay">
+        <i class="fa-solid fa-satellite-dish text-5xl text-emerald-500 mb-4 animate-pulse"></i>
+        <h2 class="text-xl font-bold text-white tracking-widest uppercase mb-2">Đang kết nối hệ thống...</h2>
+        <p class="text-slate-400 text-sm" id="loading-text">Đang tải dữ liệu đám mây từ tất cả các máy</p>
     </div>
 
     <!-- ỨNG DỤNG BẢN ĐỒ CHÍNH -->
     <div id="app-screen">
-        <div class="mb-4 flex justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg shrink-0">
+        <!-- Header -->
+        <div class="mb-4 flex flex-col md:flex-row justify-between md:items-center bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg shrink-0 gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-emerald-400"><i class="fa-solid fa-map-location-dot mr-2"></i>HUNTKEY ROUTE MANAGER</h1>
-                <p class="text-sm text-slate-400">Hệ thống đồng bộ dữ liệu đám mây trực tuyến</p>
+                <p class="text-sm text-slate-400 flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2"></span> Đã kết nối Cloud Sync (Mọi người dùng chung link đều thấy nhau)
+                </p>
             </div>
             <div class="flex items-center gap-6">
                 <div class="flex gap-4 text-sm font-semibold hidden md:flex">
-                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div> Lên Đơn</div>
-                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-amber-500 mr-2"></div> Chăm Sóc</div>
-                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div> Mới</div>
-                </div>
-                <div class="border-l border-slate-600 pl-6 flex items-center gap-3">
-                    <span id="user-display" class="text-sm text-emerald-400 font-bold"><i class="fa-solid fa-circle-user"></i> Admin</span>
-                    <button id="btn-logout" class="bg-slate-700 hover:bg-red-500/80 text-white px-3 py-1.5 rounded text-xs font-bold transition"><i class="fa-solid fa-power-off"></i> Thoát</button>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div> Đã Lên Đơn</div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-amber-500 mr-2"></div> Đang Chăm Sóc</div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div> Data Mới</div>
                 </div>
             </div>
         </div>
 
+        <!-- Main Content -->
         <div class="flex-grow flex flex-col md:flex-row gap-4 overflow-hidden h-full">
-            <div class="w-full md:w-96 bg-slate-800 rounded-lg p-0 border border-slate-700 flex flex-col overflow-hidden shrink-0 shadow-xl">
+            <!-- Sidebar Panel -->
+            <div class="w-full md:w-[400px] bg-slate-800 rounded-lg p-0 border border-slate-700 flex flex-col overflow-hidden shrink-0 shadow-xl">
+                <!-- Tabs -->
                 <div class="flex border-b border-slate-700 shrink-0">
-                    <button id="tab-list-btn" onclick="window.switchTab('list')" class="flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 hover:bg-slate-700 transition"><i class="fa-solid fa-list mr-2"></i>Theo Dõi Tuyến</button>
-                    <button id="tab-add-btn" onclick="window.switchTab('add')" class="flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700 transition"><i class="fa-solid fa-plus-location mr-2"></i>Thêm Điểm Mới</button>
+                    <button id="tab-list-btn" onclick="switchTab('list')" class="flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 hover:bg-slate-700 transition"><i class="fa-solid fa-list mr-2"></i>Danh Sách Tuyến</button>
+                    <button id="tab-add-btn" onclick="switchTab('add')" class="flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700 transition"><i class="fa-solid fa-plus-location mr-2"></i>Thêm Mới / Sửa</button>
                 </div>
 
+                <!-- Tab Content: List & Filter -->
                 <div id="tab-list" class="flex-1 flex flex-col overflow-hidden p-4">
-                    <div class="bg-slate-700 p-3 rounded-lg mb-4 border border-slate-600">
-                        <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Lọc hiển thị theo ngày:</label>
+                    
+                    <!-- KHUNG TÌM KIẾM -->
+                    <div class="mb-3 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="search-store-input" onkeyup="renderAll()" placeholder="Tìm kiếm cửa hàng, địa chỉ, SĐT..." class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-500">
+                    </div>
+
+                    <!-- Lọc Theo Ngày -->
+                    <div class="bg-slate-700 p-3 rounded-lg mb-3 border border-slate-600 flex items-center justify-between">
+                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lọc Ngày:</label>
                         <div class="flex gap-2">
-                            <input type="date" id="filter-date" onchange="window.renderAll()" class="flex-1 bg-slate-800 border border-slate-600 text-white rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500">
-                            <button onclick="window.clearFilter()" class="bg-slate-600 hover:bg-slate-500 px-3 rounded text-sm text-white transition"><i class="fa-solid fa-filter-circle-xmark"></i></button>
+                            <input type="date" id="filter-date" onchange="renderAll()" class="bg-slate-800 border border-slate-600 text-white rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500">
+                            <button onclick="clearFilter()" class="bg-slate-600 hover:bg-slate-500 px-2 rounded text-xs text-white transition"><i class="fa-solid fa-xmark"></i> Xóa</button>
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-2 mb-4 shrink-0">
-                        <button id="btn-draw-history" onclick="window.drawHistoryRoute()" class="w-full bg-amber-600 hover:bg-amber-500 text-white py-2 rounded font-bold text-sm transition shadow-lg border border-amber-500/50 flex justify-center items-center">
-                            <i class="fa-solid fa-route mr-2"></i> Xem Tuyến Đã Đi
+                    <!-- Vẽ Tuyến -->
+                    <div class="flex gap-2 mb-3 shrink-0">
+                        <button id="btn-draw-history" onclick="drawHistoryRoute()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded font-bold text-[11px] transition shadow-lg border border-amber-500/50">
+                            <i class="fa-solid fa-route mr-1"></i> Tuyến Đã Đi
                         </button>
-                        <button id="btn-draw-suggest" onclick="window.suggestRoute()" class="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-2 rounded font-bold text-sm transition shadow-lg border border-fuchsia-500/50 flex justify-center items-center">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Gợi Ý Tuyến Chăm Khách Cũ
+                        <button id="btn-draw-suggest" onclick="suggestRoute()" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-2 rounded font-bold text-[11px] transition shadow-lg border border-fuchsia-500/50">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Gợi Ý Khách Cũ
                         </button>
                     </div>
 
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="font-semibold text-xs text-slate-400 uppercase tracking-wider">Danh sách cửa hàng:</h3>
+                    <div class="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
+                        <h3 class="font-semibold text-xs text-slate-400 uppercase tracking-wider">Danh sách kết quả:</h3>
                         <span id="list-count" class="text-xs bg-slate-700 px-2 py-1 rounded text-emerald-400 font-bold">0 điểm</span>
                     </div>
                     
-                    <div id="store-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-2"></div>
+                    <!-- Store List Container -->
+                    <div id="store-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-2">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
 
+                <!-- Tab Content: Add/Edit -->
                 <div id="tab-add" class="hidden flex-1 flex flex-col overflow-y-auto p-4 bg-slate-800/50">
-                    <div class="flex gap-2 mb-4 shrink-0">
-                        <input type="text" id="search-input" placeholder="Tìm tên đường, phường..." class="flex-1 bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none">
-                        <button onclick="window.searchAddress()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-sm font-bold transition"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    
+                    <div class="bg-slate-700 p-3 rounded-lg border border-slate-600 mb-4">
+                        <label class="block text-[10px] font-semibold text-emerald-400 mb-1 uppercase">Bước 1: Tìm vị trí (Hoặc click lên bản đồ)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="search-address-input" placeholder="Gõ tên đường, phường..." class="flex-1 bg-slate-800 border border-slate-600 text-white rounded px-2 py-1.5 text-sm focus:outline-none">
+                            <button onclick="searchAddress()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-sm font-bold transition"><i class="fa-solid fa-location-crosshairs"></i> TÌM</button>
+                        </div>
                     </div>
 
                     <form id="add-store-form" onsubmit="window.saveStore(event)" class="flex flex-col gap-3">
                         <input type="hidden" id="form-id">
                         <input type="hidden" id="form-lat">
                         <input type="hidden" id="form-lng">
-                        <div class="text-xs text-amber-400 mb-1" id="coords-display">Chưa chọn vị trí trên bản đồ</div>
+                        
+                        <div class="text-xs text-amber-400 font-semibold mb-1" id="coords-display"><i class="fa-solid fa-circle-exclamation mr-1"></i> Chưa lấy được vị trí trên bản đồ</div>
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="col-span-2">
                                 <label class="block text-xs font-semibold text-slate-400 mb-1">Tên Cửa Hàng <span class="text-red-500">*</span></label>
-                                <input type="text" id="form-name" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="form-name" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" placeholder="VD: Điện Nước Tuấn Anh">
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-xs font-semibold text-slate-400 mb-1">Địa Chỉ <span class="text-red-500">*</span></label>
-                                <input type="text" id="form-address" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Địa Chỉ Thực Tế <span class="text-red-500">*</span></label>
+                                <input type="text" id="form-address" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" placeholder="VD: 15 Nguyễn Trãi, Thanh Xuân">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-400 mb-1">Ngày Đi <span class="text-red-500">*</span></label>
@@ -158,32 +153,41 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-400 mb-1">Trạng Thái <span class="text-red-500">*</span></label>
-                                <select id="form-status" class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 appearance-none">
-                                    <option value="moi">🔵 Data Mới</option>
-                                    <option value="ghetham">🟠 Đang Chăm Sóc</option>
-                                    <option value="chot">🟢 Đã Lên Đơn</option>
-                                    <option value="tu-choi">🔴 Từ chối</option>
+                                <select id="form-status" class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 appearance-none font-semibold">
+                                    <option value="moi" class="text-blue-400">🔵 Data Mới</option>
+                                    <option value="ghetham" class="text-amber-400">🟠 Đang Chăm Sóc</option>
+                                    <option value="chot" class="text-emerald-400">🟢 Đã Lên Đơn</option>
+                                    <option value="tu-choi" class="text-red-400">🔴 Từ chối</option>
                                 </select>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-xs font-semibold text-slate-400 mb-1">Ghi Chú</label>
-                                <input type="text" id="form-note" class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="form-note" class="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" placeholder="Số ĐT, thông tin trao đổi...">
                             </div>
                         </div>
 
-                        <button type="submit" id="btn-submit-form" class="mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg transition w-full uppercase text-sm">
-                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Lên Cloud
+                        <button type="submit" id="btn-submit-form" class="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition w-full uppercase text-sm tracking-wider flex justify-center items-center">
+                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Lên Hệ Thống
                         </button>
-                        <button type="button" onclick="window.clearForm()" class="mt-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition w-full text-xs">Hủy Form</button>
+                        <button type="button" onclick="window.clearForm()" class="mt-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 rounded-lg transition w-full text-xs">
+                            Hủy Bỏ / Xóa Form
+                        </button>
                     </form>
+
                 </div>
             </div>
 
+            <!-- The Map -->
             <div class="flex-1 relative rounded-lg overflow-hidden border border-slate-700 shadow-xl min-h-[400px]">
                 <div id="map" class="absolute inset-0"></div>
-                <div id="map-loading" class="absolute inset-0 bg-slate-900/80 z-[1000] flex justify-center items-center flex-col hidden">
-                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-500 mb-3"></i>
-                    <p class="text-sm font-semibold text-emerald-400">Đang đồng bộ dữ liệu đám mây...</p>
+                
+                <!-- Chú thích bản đồ (Nổi) -->
+                <div class="absolute bottom-4 left-4 bg-slate-900/90 border border-slate-600 p-3 rounded-lg shadow-lg z-[400] text-xs">
+                    <div class="font-bold text-white mb-2 border-b border-slate-700 pb-1">BẢNG CHÚ THÍCH</div>
+                    <div class="flex items-center mb-1"><div class="w-3 h-3 rounded-full bg-emerald-500 mr-2 border border-white/50"></div> <span class="text-slate-300">Đã Lên Đơn (Thành công)</span></div>
+                    <div class="flex items-center mb-1"><div class="w-3 h-3 rounded-full bg-amber-500 mr-2 border border-white/50"></div> <span class="text-slate-300">Đang Chăm Sóc</span></div>
+                    <div class="flex items-center mb-1"><div class="w-3 h-3 rounded-full bg-blue-500 mr-2 border border-white/50"></div> <span class="text-slate-300">Data Mới Chưa Đi</span></div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-red-500 mr-2 border border-white/50"></div> <span class="text-slate-300">Từ Chối Nhập Hàng</span></div>
                 </div>
             </div>
         </div>
@@ -191,164 +195,137 @@
 
     <!-- Modal Box -->
     <div id="custom-modal">
-        <div class="bg-slate-800 border border-slate-600 p-6 rounded-lg max-w-sm w-full text-center shadow-2xl">
+        <div class="bg-slate-800 border border-slate-600 p-6 rounded-lg max-w-sm w-full text-center shadow-2xl relative">
             <i id="modal-icon" class="fa-solid fa-circle-info text-4xl text-blue-400 mb-4"></i>
             <h3 id="modal-title" class="text-lg font-bold text-white mb-2">Thông báo</h3>
             <p id="modal-msg" class="text-sm text-slate-300 mb-6">Nội dung thông báo.</p>
             <div class="flex gap-3 justify-center" id="modal-actions">
-                <button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-white font-bold text-sm w-full">Đóng</button>
+                <button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-white font-bold text-sm w-full transition">Đóng</button>
             </div>
         </div>
     </div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
+    <!-- Firebase MODULE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ĐÂY LÀ MÃ CHUẨN XÁC 100% CỦA SẾP (Em đã gõ tay cẩn thận từng chữ)
-        const firebaseConfig = {
-            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJaLPkM",
-            authDomain: "ducvufasttel.firebaseapp.com",
-            projectId: "ducvufasttel",
-            storageBucket: "ducvufasttel.firebasestorage.app",
-            messagingSenderId: "1053505435431",
-            appId: "1:1053505435431:web:00163870489d2312329b02",
-            measurementId: "G-SCN84DYTE9"
-        };
-        const appId = 'huntkey-map-app';
-
-        // Khởi tạo các dịch vụ
-        let app, auth, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        } catch (err) {
-            console.error("Lỗi khởi tạo Firebase:", err);
-            document.getElementById('login-error').innerText = "Lỗi hệ thống: " + err.message;
-            document.getElementById('login-error').classList.remove('hidden');
+        // MÃ FIREBASE CỦA SẾP
+        let firebaseConfig;
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+            firebaseConfig = {
+                apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
+                authDomain: "ducvufasttel.firebaseapp.com",
+                projectId: "ducvufasttel",
+                storageBucket: "ducvufasttel.firebasestorage.app",
+                messagingSenderId: "1053505435431",
+                appId: "1:1053505435431:web:00163870489d2312329b02",
+                measurementId: "G-SCN84DYTE9"
+            };
         }
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'huntkey-map-app';
 
+        let app, auth, db;
+        
+        // UI Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        
         let storeData = [];
         let map, markersLayer, tempMarker, routeLine;
         let currentMode = 'list';
         const todayStr = new Date().toISOString().split('T')[0];
         let unsubscribeDb = null;
+        let currentUser = null;
 
-        const loginScreen = document.getElementById('login-screen');
-        const appScreen = document.getElementById('app-screen');
-        const mapLoading = document.getElementById('map-loading');
-        
+        // Modal Function
         window.showModal = (title, msg, type = 'info', confirmCallback = null) => {
             document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-msg').innerHTML = msg;
             const icon = document.getElementById('modal-icon');
-            if(type === 'error') { icon.className = "fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4"; }
-            else if(type === 'success') { icon.className = "fa-solid fa-circle-check text-4xl text-emerald-500 mb-4"; }
-            else if(type === 'warning') { icon.className = "fa-solid fa-circle-exclamation text-4xl text-amber-500 mb-4"; }
-            else { icon.className = "fa-solid fa-circle-info text-4xl text-blue-400 mb-4"; }
+            if(type === 'error') icon.className = "fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4";
+            else if(type === 'success') icon.className = "fa-solid fa-circle-check text-4xl text-emerald-500 mb-4";
+            else if(type === 'warning') icon.className = "fa-solid fa-circle-exclamation text-4xl text-amber-500 mb-4";
+            else icon.className = "fa-solid fa-circle-info text-4xl text-blue-400 mb-4";
 
             const actions = document.getElementById('modal-actions');
             if (confirmCallback) {
                 actions.innerHTML = `
-                    <button id="modal-cancel" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-white font-bold text-sm flex-1">Hủy</button>
-                    <button id="modal-confirm" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded text-white font-bold text-sm flex-1">Xác Nhận Xóa</button>
+                    <button id="modal-cancel" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-white font-bold text-sm flex-1 transition">Hủy</button>
+                    <button id="modal-confirm" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded text-white font-bold text-sm flex-1 transition">Xác Nhận Xóa</button>
                 `;
                 document.getElementById('modal-cancel').onclick = () => document.getElementById('custom-modal').classList.remove('active');
                 document.getElementById('modal-confirm').onclick = () => { confirmCallback(); document.getElementById('custom-modal').classList.remove('active'); };
             } else {
-                actions.innerHTML = `<button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-white font-bold text-sm w-full">Đóng</button>`;
+                actions.innerHTML = `<button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-white font-bold text-sm w-full transition">Đóng</button>`;
             }
             document.getElementById('custom-modal').classList.add('active');
         };
 
-        // Hàm Đăng Nhập
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            const btn = document.getElementById('btn-login');
-            const errorBox = document.getElementById('login-error');
-            
-            // Reset trạng thái
-            errorBox.classList.add('hidden');
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Đang xử lý...';
-            btn.disabled = true;
-            
-            const email = document.getElementById('login-email').value.trim();
-            const pass = document.getElementById('login-password').value.trim();
-            
+        // KHỞI ĐỘNG HỆ THỐNG ĐĂNG NHẬP ẨN DANH TỰ ĐỘNG
+        async function bootSystem() {
             try {
-                if(!auth) throw new Error("Hệ thống Firebase chưa kết nối được.");
-                await signInWithEmailAndPassword(auth, email, pass);
-                // Đăng nhập thành công, sự kiện onAuthStateChanged sẽ tự chạy
-            } catch (error) {
-                console.error("Firebase Login Error:", error);
-                errorBox.classList.remove('hidden');
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
                 
-                // Báo lỗi chính xác sang tiếng Việt
-                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    errorBox.innerHTML = "❌ Sai Email hoặc Mật khẩu! Sếp kiểm tra lại nhé.";
-                } else if (error.code === 'auth/api-key-not-valid') {
-                    // CẢNH BÁO QUAN TRỌNG NẾU API BỊ GOOGLE KHÓA
-                    errorBox.innerHTML = "❌ <b>Lỗi: Mã API Key đã bị Google khóa do lộ trên Github!</b><br>👉 Cách xử lý: Sếp hãy vào trang Firebase tạo một dự án mới tinh, copy mã mới đưa em ốp lại là xong!";
-                } else {
-                    errorBox.innerText = `❌ Lỗi: ${error.code || error.message}`;
-                }
+                loadingText.innerText = "Đang cấp quyền truy cập ẩn danh...";
                 
-                // Trả lại nút bấm
-                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
-                btn.disabled = false;
+                // Lắng nghe trạng thái
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        if (!map) initMap();
+                        loadRealtimeData();
+                        
+                        // Ẩn màn hình chờ
+                        loadingOverlay.style.opacity = '0';
+                        setTimeout(() => { loadingOverlay.style.display = 'none'; }, 500);
+                    } else {
+                        // Nếu chưa có user thì tự động đăng nhập ẩn danh
+                        signInAnonymously(auth).catch(err => {
+                            if(err.code === 'auth/operation-not-allowed') {
+                                loadingText.innerHTML = `<span class="text-red-400">LỖI: Sếp chưa bật chế độ "Anonymous (Ẩn danh)" trong Firebase > Authentication. Sếp bật lên rồi tải lại trang nhé!</span>`;
+                            } else {
+                                loadingText.innerHTML = `<span class="text-red-400">Lỗi kết nối: ${err.message}</span>`;
+                            }
+                        });
+                    }
+                });
+
+            } catch (err) {
+                loadingText.innerHTML = `<span class="text-red-400">Lỗi hệ thống: ${err.message}</span>`;
             }
-        });
-
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            signOut(auth);
-            const btn = document.getElementById('btn-login');
-            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
-            btn.disabled = false;
-        });
-
-        // Lắng nghe trạng thái User
-        if(auth) {
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    loginScreen.classList.add('hidden');
-                    appScreen.classList.add('active');
-                    document.getElementById('user-display').innerHTML = `<i class="fa-solid fa-circle-user"></i> ${user.email.split('@')[0]}`;
-                    if (!map) initMap();
-                    else setTimeout(() => map.invalidateSize(), 500);
-                    loadDatabase(user.uid);
-                } else {
-                    loginScreen.classList.remove('hidden');
-                    appScreen.classList.remove('active');
-                    if (unsubscribeDb) unsubscribeDb();
-                    storeData = [];
-                }
-            });
         }
 
-        function getCollectionPath() {
-            return collection(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores');
-        }
-
-        function loadDatabase(uid) {
-            mapLoading.classList.remove('hidden');
-            const q = query(getCollectionPath());
-            unsubscribeDb = onSnapshot(q, (snapshot) => {
+        // Tải dữ liệu Realtime
+        function loadRealtimeData() {
+            if(!currentUser) return;
+            const storesRef = collection(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores');
+            
+            unsubscribeDb = onSnapshot(storesRef, (snapshot) => {
                 storeData = [];
-                snapshot.forEach((doc) => storeData.push({ id: doc.id, ...doc.data() }));
+                snapshot.forEach((doc) => {
+                    storeData.push({ id: doc.id, ...doc.data() });
+                });
                 window.renderAll();
-                mapLoading.classList.add('hidden');
             }, (error) => {
-                window.showModal("Lỗi Đồng Bộ", "Lỗi lấy dữ liệu từ máy chủ. Vui lòng kiểm tra lại quyền truy cập (Rules) trong Firestore.", "error");
-                mapLoading.classList.add('hidden');
+                console.error("Lỗi Firestore:", error);
+                window.showModal("Lỗi Đồng Bộ", "Cửa Firebase đang bị khóa. Hãy đảm bảo Sếp đã để Firestore Rules ở chế độ Start in Test Mode.", "error");
             });
         }
 
+        // Lưu / Sửa dữ liệu
         window.saveStore = async (e) => {
             e.preventDefault();
+            if(!currentUser) return window.showModal("Lỗi", "Chưa kết nối được máy chủ.", "error");
+
             const idInput = document.getElementById('form-id').value;
             const lat = document.getElementById('form-lat').value;
             const lng = document.getElementById('form-lng').value;
@@ -357,50 +334,64 @@
 
             const docId = idInput ? idInput.toString() : Date.now().toString();
             const storeObj = {
-                name: document.getElementById('form-name').value,
-                address: document.getElementById('form-address').value,
+                name: document.getElementById('form-name').value.trim(),
+                address: document.getElementById('form-address').value.trim(),
                 date: document.getElementById('form-date').value,
                 status: document.getElementById('form-status').value,
-                note: document.getElementById('form-note').value,
-                lat: parseFloat(lat), lng: parseFloat(lng)
+                note: document.getElementById('form-note').value.trim(),
+                lat: parseFloat(lat), 
+                lng: parseFloat(lng)
             };
 
             const btn = document.getElementById('btn-submit-form');
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Đang lưu...';
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Đang tải lên...';
             btn.disabled = true;
 
             try {
-                await setDoc(doc(getCollectionPath(), docId), storeObj);
-                window.showModal("Thành công", `Đã lưu ${storeObj.name} lên hệ thống đám mây.`, "success");
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores', docId), storeObj);
+                window.showModal("Thành công", `Cửa hàng <b>${storeObj.name}</b> đã được lưu và đồng bộ tới tất cả mọi người!`, "success");
+                
                 if(tempMarker) map.removeLayer(tempMarker);
                 window.clearForm();
                 document.getElementById('filter-date').value = storeObj.date;
+                document.getElementById('search-store-input').value = '';
                 window.switchTab('list');
             } catch (err) {
                 window.showModal("Lỗi", "Lưu thất bại: " + err.message, "error");
             } finally {
-                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Lên Cloud';
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Lên Hệ Thống';
                 btn.disabled = false;
             }
         };
 
+        // Xóa dữ liệu
         window.deleteStore = (id) => {
-            window.showModal("Xác nhận Xóa", "Thao tác này sẽ xóa vĩnh viễn điểm bán khỏi hệ thống. Bạn có chắc chắn?", "warning", async () => {
+            if(!currentUser) return;
+            const store = storeData.find(s => s.id === id);
+            window.showModal("Xác nhận Xóa", `Thao tác này sẽ xóa vĩnh viễn <b>${store?.name}</b> trên máy của tất cả mọi người. Sếp chắc chắn chứ?`, "warning", async () => {
                 try {
-                    await deleteDoc(doc(getCollectionPath(), id.toString()));
-                    window.showModal("Đã xóa", "Xóa thành công.", "success");
-                } catch(err) { window.showModal("Lỗi", "Không xóa được: " + err.message, "error"); }
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores', id.toString()));
+                    map.closePopup();
+                } catch(err) { 
+                    window.showModal("Lỗi", "Không xóa được: " + err.message, "error"); 
+                }
             });
         };
 
+        // --- CÁC HÀM BẢN ĐỒ VÀ GIAO DIỆN ---
         function initMap() {
             map = L.map('map').setView([21.0000, 105.7900], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20
+            }).addTo(map);
+
             markersLayer = L.layerGroup().addTo(map);
+
             map.on('click', function(e) {
                 if(currentMode !== 'add') window.switchTab('add');
                 placeTempMarker(e.latlng.lat, e.latlng.lng);
             });
+
             document.getElementById('filter-date').value = todayStr;
             document.getElementById('form-date').value = todayStr;
         }
@@ -410,12 +401,17 @@
             if (status === 'chot') { bgColor = '#10b981'; iconClass = 'fa-check'; }
             else if (status === 'ghetham') { bgColor = '#f59e0b'; iconClass = 'fa-shoe-prints'; }
             else if (status === 'tu-choi') { bgColor = '#ef4444'; iconClass = 'fa-xmark'; }
-            return L.divIcon({ className: 'custom-icon', html: `<div class="custom-marker" style="background-color: ${bgColor}; width: 32px; height: 32px;"><i class="fa-solid ${iconClass}"></i></div>`, iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16] });
+
+            return L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="custom-marker" style="background-color: ${bgColor}; width: 34px; height: 34px;"><i class="fa-solid ${iconClass}"></i></div>`,
+                iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -17]
+            });
         }
 
         function getStatusBadge(status) {
-            if (status === 'chot') return '<span class="badge chot">Đã Lên Đơn</span>';
-            if (status === 'ghetham') return '<span class="badge ghetham">Đang chăm sóc</span>';
+            if (status === 'chot') return '<span class="badge chot"><i class="fa-solid fa-check mr-1"></i> Lên Đơn</span>';
+            if (status === 'ghetham') return '<span class="badge ghetham"><i class="fa-solid fa-shoe-prints mr-1"></i> Chăm sóc</span>';
             if (status === 'moi') return '<span class="badge moi">Data Mới</span>';
             return '<span class="badge tu-choi">Từ chối</span>';
         }
@@ -427,40 +423,66 @@
             listContainer.innerHTML = '';
             
             const filterDate = document.getElementById('filter-date').value;
-            let displayData = filterDate ? storeData.filter(s => s.date === filterDate) : storeData;
+            const searchKeyword = document.getElementById('search-store-input').value.toLowerCase().trim();
+            
+            // Lọc Ngày & Tìm kiếm
+            let displayData = storeData.filter(s => {
+                let matchDate = true;
+                if (filterDate) matchDate = (s.date === filterDate);
+                
+                let matchSearch = true;
+                if (searchKeyword) {
+                    const searchStr = `${s.name} ${s.address} ${s.note || ''}`.toLowerCase();
+                    matchSearch = searchStr.includes(searchKeyword);
+                }
+                return matchDate && matchSearch;
+            });
 
             document.getElementById('list-count').innerText = `${displayData.length} điểm`;
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
 
             displayData.forEach(store => {
                 const marker = L.marker([store.lat, store.lng], { icon: createCustomIcon(store.status) }).addTo(markersLayer);
+                
                 const popupHtml = `
-                    <h3>${store.name}</h3>
-                    <p><i class="fa-solid fa-location-dot w-4"></i> ${store.address}</p>
-                    <p><i class="fa-solid fa-calendar-day w-4"></i> ${store.date} | <i class="fa-solid fa-comment-dots w-4 ml-1"></i> ${store.note}</p>
-                    ${getStatusBadge(store.status)}
-                    <div class="mt-3 flex justify-between border-t border-slate-600 pt-2">
-                        <button onclick="window.editStore('${store.id}')" class="text-blue-400 text-xs hover:text-blue-300 font-bold"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
-                        <button onclick="window.deleteStore('${store.id}')" class="text-red-400 text-xs hover:text-red-300 font-bold"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+                    <div class="pb-1 mb-2 border-b border-slate-600">
+                        <h3 class="text-base truncate" title="${store.name}">${store.name}</h3>
+                        ${getStatusBadge(store.status)}
+                    </div>
+                    <p><i class="fa-solid fa-location-dot w-4 text-slate-400"></i> ${store.address}</p>
+                    <p><i class="fa-solid fa-calendar-day w-4 text-slate-400"></i> <span class="font-bold text-amber-400">${store.date || '---'}</span></p>
+                    <p class="italic"><i class="fa-solid fa-comment-dots w-4 text-slate-400"></i> ${store.note || 'Không có ghi chú'}</p>
+                    <div class="mt-3 flex gap-2">
+                        <button onclick="window.editStore('${store.id}')" class="flex-1 bg-blue-600/80 hover:bg-blue-600 text-white rounded py-1 text-xs font-bold transition"><i class="fa-solid fa-pen-to-square"></i> Sửa</button>
+                        <button onclick="window.deleteStore('${store.id}')" class="flex-1 bg-red-600/80 hover:bg-red-600 text-white rounded py-1 text-xs font-bold transition"><i class="fa-solid fa-trash-can"></i> Xóa</button>
                     </div>
                 `;
-                marker.bindPopup(popupHtml);
+                marker.bindPopup(popupHtml, { minWidth: 220 });
 
                 let borderColor = store.status === 'chot' ? 'border-emerald-500/50' : 'border-slate-600';
+                if(store.status === 'tu-choi') borderColor = 'border-red-500/30';
+                
+                let displayStoreName = store.name;
+                if(searchKeyword && store.name.toLowerCase().includes(searchKeyword)) {
+                    const regex = new RegExp(`(${searchKeyword})`, 'gi');
+                    displayStoreName = store.name.replace(regex, '<span class="bg-amber-500 text-slate-900 px-1 rounded">$1</span>');
+                }
+
                 const listItem = document.createElement('div');
-                listItem.className = `p-3 rounded bg-slate-700/50 border ${borderColor} flex flex-col gap-1 transition duration-200 group relative`;
+                listItem.className = `p-3 rounded-lg bg-slate-800 border ${borderColor} flex flex-col gap-1.5 hover:bg-slate-700 transition duration-200 group shadow cursor-pointer`;
                 listItem.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div class="font-bold text-sm text-white truncate cursor-pointer hover:text-emerald-400" onclick="window.focusStore(${store.lat}, ${store.lng})">${store.name}</div>
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-700 pl-2">
-                            <button onclick="window.editStore('${store.id}')" class="text-blue-400 hover:text-blue-300"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="window.deleteStore('${store.id}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flex justify-between items-start" onclick="window.focusStore(${store.lat}, ${store.lng})">
+                        <div class="font-bold text-sm text-emerald-400 truncate flex-1 pr-2">${displayStoreName}</div>
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 group-hover:bg-slate-700 pl-1 rounded">
+                            <button onclick="event.stopPropagation(); window.editStore('${store.id}')" class="text-blue-400 hover:text-blue-300 tooltip" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="event.stopPropagation(); window.deleteStore('${store.id}')" class="text-red-400 hover:text-red-300 tooltip" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
-                    <div class="text-xs text-slate-400 truncate cursor-pointer" onclick="window.focusStore(${store.lat}, ${store.lng})"><i class="fa-solid fa-location-dot text-slate-500"></i> ${store.address}</div>
-                    <div class="flex justify-between items-center mt-1">
+                    <div class="text-[11px] text-slate-300 leading-tight" onclick="window.focusStore(${store.lat}, ${store.lng})"><i class="fa-solid fa-location-dot text-slate-500 mr-1"></i> ${store.address}</div>
+                    ${store.note ? `<div class="text-[10px] text-slate-400 italic truncate"><i class="fa-regular fa-comment-dots text-slate-500 mr-1"></i> ${store.note}</div>` : ''}
+                    <div class="flex justify-between items-end mt-1 pt-2 border-t border-slate-700/50" onclick="window.focusStore(${store.lat}, ${store.lng})">
                         ${getStatusBadge(store.status)}
-                        <span class="text-[10px] text-slate-500"><i class="fa-regular fa-clock"></i> ${store.date}</span>
+                        <span class="text-[10px] text-slate-400 font-semibold bg-slate-900 px-1.5 py-0.5 rounded"><i class="fa-regular fa-calendar mr-1"></i>${store.date}</span>
                     </div>
                 `;
                 listContainer.appendChild(listItem);
@@ -486,22 +508,26 @@
             
             map.flyTo([store.lat, store.lng], 16);
             placeTempMarker(store.lat, store.lng);
-            document.getElementById('btn-submit-form').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i> Cập Nhật Lên Cloud';
+            document.getElementById('btn-submit-form').innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i> Cập Nhật Thay Đổi';
             window.switchTab('add');
         };
 
         function placeTempMarker(lat, lng) {
             if(tempMarker) map.removeLayer(tempMarker);
-            const tempIcon = L.divIcon({ className: 'custom-icon', html: `<div class="custom-marker temp-marker" style="width: 30px; height: 30px;"><i class="fa-solid fa-location-crosshairs text-yellow-300"></i></div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+            const tempIcon = L.divIcon({ className: 'custom-icon', html: `<div class="custom-marker temp-marker" style="width: 30px; height: 30px;"><i class="fa-solid fa-location-crosshairs text-slate-900 bg-yellow-300 rounded-full p-1"></i></div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
             tempMarker = L.marker([lat, lng], {icon: tempIcon}).addTo(map);
             document.getElementById('form-lat').value = lat; document.getElementById('form-lng').value = lng;
-            document.getElementById('coords-display').innerHTML = `<i class="fa-solid fa-location-dot"></i> Tọa độ: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            document.getElementById('coords-display').innerHTML = `<i class="fa-solid fa-location-dot"></i> Đã ghim: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
             document.getElementById('coords-display').className = "text-xs text-emerald-400 font-bold mb-1";
         }
 
         window.searchAddress = async () => {
-            const query = document.getElementById('search-input').value;
-            if(!query) return;
+            const query = document.getElementById('search-address-input').value;
+            if(!query) return window.showModal("Chú ý", "Hãy nhập tên đường cần tìm vào ô.", "info");
+            
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
             const searchQuery = query.toLowerCase().includes('hà nội') ? query : query + ', Hà Nội';
             try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
@@ -510,53 +536,74 @@
                     map.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 16);
                     placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
-                } else window.showModal("Cảnh báo", "Không tìm thấy địa chỉ.", "warning");
+                } else window.showModal("Không thấy", "Không tìm thấy địa chỉ. Sếp hãy chạm trực tiếp lên bản đồ để lấy vị trí.", "warning");
             } catch (err) { window.showModal("Lỗi", "Lỗi kết nối mạng.", "error"); }
+            finally { btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> TÌM'; }
         };
 
         window.clearForm = () => {
             document.getElementById('add-store-form').reset();
             document.getElementById('form-id').value = '';
             document.getElementById('form-date').value = todayStr;
-            document.getElementById('btn-submit-form').innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Lên Cloud';
-            document.getElementById('coords-display').innerHTML = "Chưa chọn vị trí trên bản đồ";
-            document.getElementById('coords-display').className = "text-xs text-amber-400 mb-1";
+            document.getElementById('btn-submit-form').innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Lên Hệ Thống';
+            document.getElementById('coords-display').innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1"></i> Chưa lấy được vị trí';
+            document.getElementById('coords-display').className = "text-xs text-amber-400 font-semibold mb-1";
             if(tempMarker) map.removeLayer(tempMarker);
         };
 
-        window.clearFilter = () => { document.getElementById('filter-date').value = ''; window.renderAll(); };
+        window.clearFilter = () => { 
+            document.getElementById('filter-date').value = ''; 
+            document.getElementById('search-store-input').value = ''; 
+            window.renderAll(); 
+        };
 
         window.switchTab = (tab) => {
             currentMode = tab;
             const tListBtn = document.getElementById('tab-list-btn'), tAddBtn = document.getElementById('tab-add-btn');
             const tList = document.getElementById('tab-list'), tAdd = document.getElementById('tab-add');
             if(tab === 'list') {
-                tListBtn.className = "flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50";
-                tAddBtn.className = "flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700";
+                tListBtn.className = "flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 hover:bg-slate-700 transition";
+                tAddBtn.className = "flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700 transition";
                 tList.classList.remove('hidden'); tAdd.classList.add('hidden');
                 if(tempMarker) map.removeLayer(tempMarker);
             } else {
-                tAddBtn.className = "flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50";
-                tListBtn.className = "flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700";
+                tAddBtn.className = "flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 hover:bg-slate-700 transition";
+                tListBtn.className = "flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700 transition";
                 tAdd.classList.remove('hidden'); tList.classList.add('hidden');
                 setTimeout(() => map.invalidateSize(), 100);
             }
         };
 
         window.drawHistoryRoute = () => {
-            if (routeLine) { map.removeLayer(routeLine); routeLine = null; return; }
+            if (routeLine) { 
+                map.removeLayer(routeLine); routeLine = null; 
+                document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-route mr-1"></i> Tuyến Đã Đi';
+                document.getElementById('btn-draw-history').className = "flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded font-bold text-[11px] transition shadow-lg border border-amber-500/50";
+                return; 
+            }
             const filterDate = document.getElementById('filter-date').value;
             let dataToDraw = filterDate ? storeData.filter(s => s.date === filterDate) : storeData;
-            dataToDraw = dataToDraw.filter(s => s.status !== 'moi');
-            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Ghé Thăm.", "warning");
-            routeLine = L.polyline(dataToDraw.map(s => [s.lat, s.lng]), { color: '#f59e0b', weight: 5, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(map);
+            dataToDraw = dataToDraw.filter(s => s.status === 'ghetham' || s.status === 'chot');
+            
+            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm (Đã Ghé Thăm/Lên Đơn) trong ngày đang lọc.", "warning");
+            
+            dataToDraw.sort((a,b) => a.id - b.id);
+            routeLine = L.polyline(dataToDraw.map(s => [s.lat, s.lng]), { color: '#f59e0b', weight: 4, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(map);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+
+            document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-eye-slash mr-1"></i> Ẩn Tuyến';
+            document.getElementById('btn-draw-history').className = "flex-1 bg-slate-600 hover:bg-slate-500 text-white py-2 rounded font-bold text-[11px] transition shadow-lg border border-slate-500/50";
         };
 
         window.suggestRoute = () => {
-            if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+            if (routeLine) { 
+                map.removeLayer(routeLine); routeLine = null; 
+                document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Gợi Ý Khách Cũ';
+                document.getElementById('btn-draw-suggest').className = "flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-2 rounded font-bold text-[11px] transition shadow-lg border border-fuchsia-500/50";
+                return; 
+            }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để gợi ý tuyến đi.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Gợi ý", "Không đủ Khách Cũ để tính toán lộ trình.", "info");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -575,8 +622,14 @@
             let dashOffset = 0;
             setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashArray: '15, 15', dashOffset: dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("Thành công", `Đã tính toán lộ trình tối ưu cho ${route.length} điểm bán.`, "success");
+            
+            window.showModal("Thành công", `Lộ trình AI cho ${route.length} khách cũ.`, "success");
+            document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-eraser mr-1"></i> Xóa Gợi Ý';
+            document.getElementById('btn-draw-suggest').className = "flex-1 bg-slate-600 hover:bg-slate-500 text-white py-2 rounded font-bold text-[11px] transition shadow-lg border border-slate-500/50";
         };
+
+        // Kích hoạt khi trang load xong
+        window.onload = bootSystem;
     </script>
 </body>
 </html>
