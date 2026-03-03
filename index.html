@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huntkey Route Manager v3.0</title>
+    <title>Hệ Thống Quản Trị Huntkey</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -49,15 +49,15 @@
     <div id="login-screen">
         <div class="login-box text-center">
             <div class="text-emerald-400 text-5xl mb-4"><i class="fa-solid fa-shield-halved"></i></div>
-            <h2 class="text-2xl font-bold text-white mb-2 uppercase tracking-widest">Huntkey System</h2>
-            <p class="text-slate-400 text-sm mb-6">Đăng nhập (Phiên bản 3.0 - Đã Fix API)</p>
+            <h2 class="text-2xl font-bold text-white mb-2 uppercase tracking-widest">HỆ THỐNG HUNTKEY</h2>
+            <p class="text-slate-400 text-sm mb-6">Đăng nhập để truy cập dữ liệu quản trị</p>
             
             <form id="login-form" class="flex flex-col gap-4 text-left">
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Email / Tài khoản</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
-                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="ducvu.fasttel001@gmail.com">
+                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="Email của bạn">
                     </div>
                 </div>
                 <div>
@@ -72,7 +72,7 @@
                     <i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập
                 </button>
             </form>
-            <p class="text-xs text-slate-500 mt-6">Hệ thống quản trị nội bộ dành riêng cho Fasttel.</p>
+            <p class="text-xs text-slate-500 mt-6">Phần mềm quản trị nội bộ dành riêng cho Fasttel.</p>
         </div>
     </div>
 
@@ -81,7 +81,7 @@
         <div class="mb-4 flex justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg shrink-0">
             <div>
                 <h1 class="text-2xl font-bold text-emerald-400"><i class="fa-solid fa-map-location-dot mr-2"></i>HUNTKEY ROUTE MANAGER</h1>
-                <p class="text-sm text-slate-400">Database Đám mây (Đồng bộ thời gian thực)</p>
+                <p class="text-sm text-slate-400">Hệ thống đồng bộ dữ liệu đám mây trực tuyến</p>
             </div>
             <div class="flex items-center gap-6">
                 <div class="flex gap-4 text-sm font-semibold hidden md:flex">
@@ -206,9 +206,9 @@
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // MÃ API ĐÃ ĐƯỢC COPY CHUẨN XÁC 100% TỪ BẢN GỐC CỦA SẾP
+        // MÃ FIREBASE CHUẨN XÁC ĐÃ TRÍCH XUẤT TỪ ẢNH CỦA SẾP
         const firebaseConfig = {
-            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
+            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJaLPkM",
             authDomain: "ducvufasttel.firebaseapp.com",
             projectId: "ducvufasttel",
             storageBucket: "ducvufasttel.firebasestorage.app",
@@ -267,23 +267,29 @@
             
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
+                // Nếu đăng nhập thành công, sự kiện onAuthStateChanged bên dưới sẽ tự động chạy
             } catch (error) {
                 errorBox.classList.remove('hidden');
                 if (error.code === 'auth/invalid-credential') {
-                    errorBox.innerText = "❌ Sai Email hoặc Mật khẩu! Sếp kiểm tra lại nhé.";
+                    errorBox.innerText = "❌ Sai Email hoặc Mật khẩu! Bạn vui lòng kiểm tra lại.";
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorBox.innerText = "❌ Sếp chưa bật Email/Password trong Firebase!";
-                } else if (error.message.includes('domain') || error.code === 'auth/unauthorized-domain') {
-                    errorBox.innerText = "❌ LỖI TÊN MIỀN: Hãy chắc chắn đã thêm tên miền vào Firebase.";
+                    errorBox.innerText = "❌ Lỗi hệ thống: Chưa bật đăng nhập Email trong Firebase.";
+                } else if (error.code === 'auth/api-key-not-valid') {
+                    errorBox.innerText = "❌ Lỗi: Mã kết nối máy chủ (API Key) không hợp lệ.";
                 } else {
-                    errorBox.innerText = "❌ Lỗi: " + error.message;
+                    errorBox.innerText = "❌ Lỗi kết nối: " + error.message;
                 }
-            } finally {
+                // Chuyển nút về trạng thái ban đầu nếu có lỗi
                 btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
             }
         });
 
-        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            signOut(auth);
+            // Reset giao diện nút đăng nhập khi đăng xuất
+            const btn = document.getElementById('btn-login');
+            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập';
+        });
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -314,7 +320,7 @@
                 window.renderAll();
                 mapLoading.classList.add('hidden');
             }, (error) => {
-                window.showModal("Lỗi Đồng Bộ", "Lỗi lấy dữ liệu từ Firebase. Hãy đảm bảo Rule Firebase ở dạng Test Mode.", "error");
+                window.showModal("Lỗi Đồng Bộ", "Lỗi lấy dữ liệu từ máy chủ. Vui lòng kiểm tra lại mạng hoặc quyền truy cập.", "error");
                 mapLoading.classList.add('hidden');
             });
         }
@@ -325,7 +331,7 @@
             const lat = document.getElementById('form-lat').value;
             const lng = document.getElementById('form-lng').value;
             
-            if(!lat || !lng) return window.showModal("Cảnh báo", "Ghim vị trí trên bản đồ trước!", "warning");
+            if(!lat || !lng) return window.showModal("Cảnh báo", "Bạn chưa ghim vị trí trên bản đồ!", "warning");
 
             const docId = idInput ? idInput.toString() : Date.now().toString();
             const storeObj = {
@@ -343,7 +349,7 @@
 
             try {
                 await setDoc(doc(getCollectionPath(), docId), storeObj);
-                window.showModal("Thành công", `Đã lưu ${storeObj.name} lên Cloud.`, "success");
+                window.showModal("Thành công", `Đã lưu ${storeObj.name} lên hệ thống đám mây.`, "success");
                 if(tempMarker) map.removeLayer(tempMarker);
                 window.clearForm();
                 document.getElementById('filter-date').value = storeObj.date;
@@ -357,7 +363,7 @@
         };
 
         window.deleteStore = (id) => {
-            window.showModal("Xác nhận Xóa", "Chắc chắn muốn xóa điểm bán này?", "warning", async () => {
+            window.showModal("Xác nhận Xóa", "Thao tác này sẽ xóa vĩnh viễn điểm bán khỏi hệ thống. Bạn có chắc chắn?", "warning", async () => {
                 try {
                     await deleteDoc(doc(getCollectionPath(), id.toString()));
                     window.showModal("Đã xóa", "Xóa thành công.", "success");
@@ -483,7 +489,7 @@
                     placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
                 } else window.showModal("Cảnh báo", "Không tìm thấy địa chỉ.", "warning");
-            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối.", "error"); }
+            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối mạng.", "error"); }
         };
 
         window.clearForm = () => {
@@ -528,7 +534,7 @@
         window.suggestRoute = () => {
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để gợi ý tuyến đi.", "warning");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -547,7 +553,7 @@
             let dashOffset = 0;
             setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashArray: '15, 15', dashOffset: dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("Thành công", `Lộ trình cho ${route.length} khách.`, "success");
+            window.showModal("Thành công", `Đã tính toán lộ trình tối ưu cho ${route.length} điểm bán.`, "success");
         };
     </script>
 </body>
