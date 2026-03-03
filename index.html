@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huntkey Route Manager - Cổng Đăng Nhập</title>
+    <title>Huntkey Route Manager v2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: white; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Login Screen */
         #login-screen { position: fixed; inset: 0; background-color: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 9999; background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); }
         .login-box { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid #334155; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
         
-        /* Map App */
         #app-screen { display: none; height: 100vh; flex-direction: column; padding: 16px; }
         #app-screen.active { display: flex; }
         
@@ -41,7 +39,6 @@
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
-        /* Modal Notification */
         #custom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; }
         #custom-modal.active { display: flex; }
     </style>
@@ -53,14 +50,14 @@
         <div class="login-box text-center">
             <div class="text-emerald-400 text-5xl mb-4"><i class="fa-solid fa-shield-halved"></i></div>
             <h2 class="text-2xl font-bold text-white mb-2 uppercase tracking-widest">Huntkey System</h2>
-            <p class="text-slate-400 text-sm mb-6">Đăng nhập để truy cập dữ liệu quản trị</p>
+            <p class="text-slate-400 text-sm mb-6">Đăng nhập để truy cập dữ liệu quản trị (Phiên bản 2.0)</p>
             
             <form id="login-form" class="flex flex-col gap-4 text-left">
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 mb-1">Email / Tài khoản</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
-                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="admin@fasttel.vn">
+                        <input type="email" id="login-email" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="ducvu.fasttel001@gmail.com">
                     </div>
                 </div>
                 <div>
@@ -70,9 +67,7 @@
                         <input type="password" id="login-password" required class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg pl-10 pr-3 py-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="••••••••">
                     </div>
                 </div>
-                <!-- Box báo lỗi thông minh -->
                 <div id="login-error" class="bg-red-500/20 border border-red-500 text-red-400 text-xs text-center p-2 rounded hidden">Lỗi</div>
-                
                 <button type="submit" id="btn-login" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg shadow-lg transition w-full uppercase tracking-wider">
                     <i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập
                 </button>
@@ -83,7 +78,6 @@
 
     <!-- ỨNG DỤNG BẢN ĐỒ CHÍNH -->
     <div id="app-screen">
-        <!-- Header -->
         <div class="mb-4 flex justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg shrink-0">
             <div>
                 <h1 class="text-2xl font-bold text-emerald-400"><i class="fa-solid fa-map-location-dot mr-2"></i>HUNTKEY ROUTE MANAGER</h1>
@@ -91,9 +85,9 @@
             </div>
             <div class="flex items-center gap-6">
                 <div class="flex gap-4 text-sm font-semibold hidden md:flex">
-                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div> Đã Lên Đơn</div>
-                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-amber-500 mr-2"></div> Đang Chăm Sóc</div>
-                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div> Data Mới</div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div> Lên Đơn</div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-amber-500 mr-2"></div> Chăm Sóc</div>
+                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div> Mới</div>
                 </div>
                 <div class="border-l border-slate-600 pl-6 flex items-center gap-3">
                     <span id="user-display" class="text-sm text-emerald-400 font-bold"><i class="fa-solid fa-circle-user"></i> Admin</span>
@@ -102,17 +96,13 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="flex-grow flex flex-col md:flex-row gap-4 overflow-hidden h-full">
-            <!-- Sidebar Panel -->
             <div class="w-full md:w-96 bg-slate-800 rounded-lg p-0 border border-slate-700 flex flex-col overflow-hidden shrink-0 shadow-xl">
-                <!-- Tabs -->
                 <div class="flex border-b border-slate-700 shrink-0">
                     <button id="tab-list-btn" onclick="window.switchTab('list')" class="flex-1 py-3 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 hover:bg-slate-700 transition"><i class="fa-solid fa-list mr-2"></i>Theo Dõi Tuyến</button>
                     <button id="tab-add-btn" onclick="window.switchTab('add')" class="flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700 transition"><i class="fa-solid fa-plus-location mr-2"></i>Thêm Điểm Mới</button>
                 </div>
 
-                <!-- Tab Content: List & Filter -->
                 <div id="tab-list" class="flex-1 flex flex-col overflow-hidden p-4">
                     <div class="bg-slate-700 p-3 rounded-lg mb-4 border border-slate-600">
                         <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Lọc hiển thị theo ngày:</label>
@@ -127,7 +117,7 @@
                             <i class="fa-solid fa-route mr-2"></i> Xem Tuyến Đã Đi
                         </button>
                         <button id="btn-draw-suggest" onclick="window.suggestRoute()" class="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-2 rounded font-bold text-sm transition shadow-lg border border-fuchsia-500/50 flex justify-center items-center">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Gợi Ý Tuyến Chăm Sóc Khách Cũ
+                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Gợi Ý Tuyến Chăm Khách Cũ
                         </button>
                     </div>
 
@@ -136,12 +126,9 @@
                         <span id="list-count" class="text-xs bg-slate-700 px-2 py-1 rounded text-emerald-400 font-bold">0 điểm</span>
                     </div>
                     
-                    <div id="store-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-2">
-                        <!-- Populated by JS -->
-                    </div>
+                    <div id="store-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-2"></div>
                 </div>
 
-                <!-- Tab Content: Add/Edit -->
                 <div id="tab-add" class="hidden flex-1 flex flex-col overflow-y-auto p-4 bg-slate-800/50">
                     <div class="flex gap-2 mb-4 shrink-0">
                         <input type="text" id="search-input" placeholder="Tìm tên đường, phường..." class="flex-1 bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none">
@@ -190,10 +177,8 @@
                 </div>
             </div>
 
-            <!-- The Map -->
             <div class="flex-1 relative rounded-lg overflow-hidden border border-slate-700 shadow-xl min-h-[400px]">
                 <div id="map" class="absolute inset-0"></div>
-                <!-- Loading Indicator -->
                 <div id="map-loading" class="absolute inset-0 bg-slate-900/80 z-[1000] flex justify-center items-center flex-col hidden">
                     <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-500 mb-3"></i>
                     <p class="text-sm font-semibold text-emerald-400">Đang đồng bộ dữ liệu đám mây...</p>
@@ -202,7 +187,7 @@
         </div>
     </div>
 
-    <!-- Modal Box (Thay thế alert) -->
+    <!-- Modal Box -->
     <div id="custom-modal">
         <div class="bg-slate-800 border border-slate-600 p-6 rounded-lg max-w-sm w-full text-center shadow-2xl">
             <i id="modal-icon" class="fa-solid fa-circle-info text-4xl text-blue-400 mb-4"></i>
@@ -214,18 +199,16 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
-    <!-- Firebase MODULE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // FIREBASE CONFIG CHUẨN ĐÃ ĐƯỢC CHÈN SẴN
+        // MÃ API CHUẨN XÁC 100% THEO ĐÚNG ẢNH SẾP CHỤP
         const firebaseConfig = {
-            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
+            apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJaLPkM",
             authDomain: "ducvufasttel.firebaseapp.com",
             projectId: "ducvufasttel",
             storageBucket: "ducvufasttel.firebasestorage.app",
@@ -233,27 +216,22 @@
             appId: "1:1053505435431:web:00163870489d2312329b02",
             measurementId: "G-SCN84DYTE9"
         };
-        
         const appId = 'huntkey-map-app';
 
-        // Khởi tạo Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Biến toàn cục hệ thống
         let storeData = [];
         let map, markersLayer, tempMarker, routeLine;
         let currentMode = 'list';
         const todayStr = new Date().toISOString().split('T')[0];
         let unsubscribeDb = null;
 
-        // UI Elements
         const loginScreen = document.getElementById('login-screen');
         const appScreen = document.getElementById('app-screen');
         const mapLoading = document.getElementById('map-loading');
         
-        // --- CHỨC NĂNG THÔNG BÁO MODAL ---
         window.showModal = (title, msg, type = 'info', confirmCallback = null) => {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-msg').innerText = msg;
@@ -277,7 +255,6 @@
             document.getElementById('custom-modal').classList.add('active');
         };
 
-        // --- AUTHENTICATION (ĐĂNG NHẬP) ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-login');
@@ -289,19 +266,15 @@
             const pass = document.getElementById('login-password').value.trim();
             
             try {
-                // ĐĂNG NHẬP THỰC TẾ TRỰC TIẾP
                 await signInWithEmailAndPassword(auth, email, pass);
             } catch (error) {
-                console.error("LỖI ĐĂNG NHẬP FIREBASE:", error);
                 errorBox.classList.remove('hidden');
-                
-                // PHÂN TÍCH LỖI ĐỂ BÁO CHO SẾP BIẾT CHÍNH XÁC BỊ SAO
                 if (error.code === 'auth/invalid-credential') {
                     errorBox.innerText = "❌ Sai Email hoặc Mật khẩu! Sếp kiểm tra lại nhé.";
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorBox.innerText = "❌ LỖI: Sếp chưa Bật chức năng đăng nhập Email/Password trong Firebase!";
-                } else if (error.message.includes('domain')) {
-                    errorBox.innerText = "❌ LỖI TÊN MIỀN: Sếp chưa thêm ducvufasttel001-a11y.github.io vào danh sách Authorized domains trong Firebase.";
+                    errorBox.innerText = "❌ Sếp chưa bật Email/Password trong Firebase!";
+                } else if (error.message.includes('domain') || error.code === 'auth/unauthorized-domain') {
+                    errorBox.innerText = "❌ LỖI TÊN MIỀN: Hãy chắc chắn đã thêm tên miền vào Firebase.";
                 } else {
                     errorBox.innerText = "❌ Lỗi: " + error.message;
                 }
@@ -310,34 +283,24 @@
             }
         });
 
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            signOut(auth);
-        });
+        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
 
-        // LẮNG NGHE TRẠNG THÁI ĐĂNG NHẬP
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Đã đăng nhập
                 loginScreen.classList.add('hidden');
                 appScreen.classList.add('active');
-                document.getElementById('user-display').innerHTML = `<i class="fa-solid fa-circle-user"></i> ${user.email ? user.email.split('@')[0] : 'Admin'}`;
-                
-                // Khởi tạo bản đồ nếu chưa có
+                document.getElementById('user-display').innerHTML = `<i class="fa-solid fa-circle-user"></i> ${user.email.split('@')[0]}`;
                 if (!map) initMap();
-                else setTimeout(() => map.invalidateSize(), 500); // Fix lỗi xám bản đồ
-                
-                // Load Database
+                else setTimeout(() => map.invalidateSize(), 500);
                 loadDatabase(user.uid);
             } else {
-                // Chưa đăng nhập
                 loginScreen.classList.remove('hidden');
                 appScreen.classList.remove('active');
-                if (unsubscribeDb) unsubscribeDb(); // Ngắt kết nối DB
+                if (unsubscribeDb) unsubscribeDb();
                 storeData = [];
             }
         });
 
-        // --- DATABASE FIRESTORE ---
         function getCollectionPath() {
             return collection(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores');
         }
@@ -345,18 +308,14 @@
         function loadDatabase(uid) {
             mapLoading.classList.remove('hidden');
             const q = query(getCollectionPath());
-            
             unsubscribeDb = onSnapshot(q, (snapshot) => {
                 storeData = [];
-                snapshot.forEach((doc) => {
-                    storeData.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach((doc) => storeData.push({ id: doc.id, ...doc.data() }));
                 window.renderAll();
                 mapLoading.classList.add('hidden');
             }, (error) => {
-                window.showModal("Lỗi Đồng Bộ", "Không thể lấy dữ liệu từ Đám mây. Vui lòng kiểm tra lại thiết lập Database Firebase của Sếp.", "error");
+                window.showModal("Lỗi Đồng Bộ", "Lỗi lấy dữ liệu từ Firebase. Hãy đảm bảo Rule Firebase ở dạng Test Mode.", "error");
                 mapLoading.classList.add('hidden');
-                console.error("LỖI FIRESTORE:", error);
             });
         }
 
@@ -366,7 +325,7 @@
             const lat = document.getElementById('form-lat').value;
             const lng = document.getElementById('form-lng').value;
             
-            if(!lat || !lng) return window.showModal("Cảnh báo", "Bạn phải ghim vị trí trên bản đồ trước!", "warning");
+            if(!lat || !lng) return window.showModal("Cảnh báo", "Ghim vị trí trên bản đồ trước!", "warning");
 
             const docId = idInput ? idInput.toString() : Date.now().toString();
             const storeObj = {
@@ -384,11 +343,10 @@
 
             try {
                 await setDoc(doc(getCollectionPath(), docId), storeObj);
-                window.showModal("Thành công", `Đã lưu thông tin ${storeObj.name} lên Hệ thống đám mây.`, "success");
-                
+                window.showModal("Thành công", `Đã lưu ${storeObj.name} lên Cloud.`, "success");
                 if(tempMarker) map.removeLayer(tempMarker);
                 window.clearForm();
-                document.getElementById('filter-date').value = storeObj.date; // Tự động lọc ngày vừa lưu
+                document.getElementById('filter-date').value = storeObj.date;
                 window.switchTab('list');
             } catch (err) {
                 window.showModal("Lỗi", "Lưu thất bại: " + err.message, "error");
@@ -399,29 +357,22 @@
         };
 
         window.deleteStore = (id) => {
-            window.showModal("Xác nhận Xóa", "Thao tác này sẽ xóa vĩnh viễn điểm bán khỏi Database Hệ thống. Bạn có chắc chắn?", "warning", async () => {
+            window.showModal("Xác nhận Xóa", "Chắc chắn muốn xóa điểm bán này?", "warning", async () => {
                 try {
                     await deleteDoc(doc(getCollectionPath(), id.toString()));
-                    window.showModal("Đã xóa", "Xóa thành công khỏi hệ thống.", "success");
-                } catch(err) {
-                    window.showModal("Lỗi", "Không thể xóa: " + err.message, "error");
-                }
+                    window.showModal("Đã xóa", "Xóa thành công.", "success");
+                } catch(err) { window.showModal("Lỗi", "Không xóa được: " + err.message, "error"); }
             });
         };
 
-        // --- CÁC HÀM BẢN ĐỒ & GIAO DIỆN ---
         function initMap() {
             map = L.map('map').setView([21.0000, 105.7900], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20
-            }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }).addTo(map);
             markersLayer = L.layerGroup().addTo(map);
-
             map.on('click', function(e) {
                 if(currentMode !== 'add') window.switchTab('add');
                 placeTempMarker(e.latlng.lat, e.latlng.lng);
             });
-
             document.getElementById('filter-date').value = todayStr;
             document.getElementById('form-date').value = todayStr;
         }
@@ -431,12 +382,7 @@
             if (status === 'chot') { bgColor = '#10b981'; iconClass = 'fa-check'; }
             else if (status === 'ghetham') { bgColor = '#f59e0b'; iconClass = 'fa-shoe-prints'; }
             else if (status === 'tu-choi') { bgColor = '#ef4444'; iconClass = 'fa-xmark'; }
-
-            return L.divIcon({
-                className: 'custom-icon',
-                html: `<div class="custom-marker" style="background-color: ${bgColor}; width: 32px; height: 32px;"><i class="fa-solid ${iconClass}"></i></div>`,
-                iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
-            });
+            return L.divIcon({ className: 'custom-icon', html: `<div class="custom-marker" style="background-color: ${bgColor}; width: 32px; height: 32px;"><i class="fa-solid ${iconClass}"></i></div>`, iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16] });
         }
 
         function getStatusBadge(status) {
@@ -453,15 +399,13 @@
             listContainer.innerHTML = '';
             
             const filterDate = document.getElementById('filter-date').value;
-            let displayData = storeData;
-            if (filterDate) displayData = storeData.filter(s => s.date === filterDate);
+            let displayData = filterDate ? storeData.filter(s => s.date === filterDate) : storeData;
 
             document.getElementById('list-count').innerText = `${displayData.length} điểm`;
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
 
             displayData.forEach(store => {
                 const marker = L.marker([store.lat, store.lng], { icon: createCustomIcon(store.status) }).addTo(markersLayer);
-                
                 const popupHtml = `
                     <h3>${store.name}</h3>
                     <p><i class="fa-solid fa-location-dot w-4"></i> ${store.address}</p>
@@ -538,8 +482,8 @@
                     map.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 16);
                     placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
-                } else window.showModal("Cảnh báo", "Không tìm thấy địa chỉ. Hãy chạm lên bản đồ để lấy vị trí.", "warning");
-            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối tìm kiếm.", "error"); }
+                } else window.showModal("Cảnh báo", "Không tìm thấy địa chỉ.", "warning");
+            } catch (err) { window.showModal("Lỗi", "Lỗi kết nối.", "error"); }
         };
 
         window.clearForm = () => {
@@ -576,8 +520,7 @@
             const filterDate = document.getElementById('filter-date').value;
             let dataToDraw = filterDate ? storeData.filter(s => s.date === filterDate) : storeData;
             dataToDraw = dataToDraw.filter(s => s.status !== 'moi');
-            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần có ít nhất 2 điểm Đã Ghé Thăm để vẽ tuyến đường.", "warning");
-            
+            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Ghé Thăm.", "warning");
             routeLine = L.polyline(dataToDraw.map(s => [s.lat, s.lng]), { color: '#f59e0b', weight: 5, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(map);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
         };
@@ -585,7 +528,7 @@
         window.suggestRoute = () => {
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để tính toán tuyến gợi ý.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ.", "warning");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -604,7 +547,7 @@
             let dashOffset = 0;
             setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashArray: '15, 15', dashOffset: dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("Thành công", `Đã tính toán lộ trình tối ưu cho ${route.length} khách hàng.`, "success");
+            window.showModal("Thành công", `Lộ trình cho ${route.length} khách.`, "success");
         };
     </script>
 </body>
