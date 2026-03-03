@@ -2,26 +2,36 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <!-- Đã gỡ bỏ giới hạn zoom để mobile tương tác tự nhiên -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huntkey Route Manager - Bản Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Huntkey Route Manager - Mobile App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Đã gỡ overflow: hidden để cho phép cuộn toàn trang nếu cần */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: white; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+        /* CSS Reset chuẩn cho Mobile Web App */
+        html, body { 
+            height: 100%; 
+            width: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; /* Cấm cuộn toàn trang */
+            background-color: #0f172a; 
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Ngăn highlight khi chạm trên mobile */
+            -webkit-tap-highlight-color: transparent; 
+        }
         
-        #app-screen { display: flex; height: 100vh; flex-direction: column; padding: 8px; md:padding: 16px; }
-        
-        /* Đảm bảo map luôn hiển thị tốt, chiếm 50% màn hình trên mobile */
-        #map { width: 100%; height: 100%; min-height: 40vh; border-radius: 0.5rem; z-index: 1; cursor: crosshair; }
-        
-        .leaflet-popup-content-wrapper { background-color: #1e293b; color: white; border: 1px solid #334155; padding: 0; overflow: hidden;}
+        /* Cấu trúc lõi */
+        #app-wrapper { display: flex; flex-direction: column; height: 100%; width: 100%; padding: 8px; box-sizing: border-box; gap: 8px; }
+        @media (min-width: 768px) { #app-wrapper { padding: 16px; gap: 16px; } }
+
+        /* Map Styles */
+        .leaflet-popup-content-wrapper { background-color: #1e293b; color: white; border: 1px solid #334155; padding: 0; overflow: hidden; border-radius: 8px;}
         .leaflet-popup-tip { background-color: #1e293b; }
-        .leaflet-popup-content { margin: 10px; }
-        .leaflet-popup-content h3 { color: #10b981; margin-top: 0; margin-bottom: 5px; font-weight: bold; font-size: 15px; }
-        .leaflet-popup-content p { margin: 4px 0; font-size: 12px; color: #cbd5e1; }
+        .leaflet-popup-content { margin: 8px; }
+        .leaflet-popup-content h3 { color: #10b981; margin-top: 0; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
+        .leaflet-popup-content p { margin: 2px 0; font-size: 11px; color: #cbd5e1; }
         
         .badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-top: 3px; }
         .badge.chot { background-color: #10b981; color: #064e3b; }
@@ -29,23 +39,25 @@
         .badge.moi { background-color: #3b82f6; color: #1e3a8a; }
         .badge.tu-choi { background-color: #ef4444; color: #7f1d1d; }
 
-        .custom-marker { display: flex; justify-content: center; align-items: center; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 2px solid white; transition: transform 0.2s; }
-        .custom-marker:hover { transform: scale(1.2); }
+        .custom-marker { display: flex; justify-content: center; align-items: center; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: transform 0.2s; }
         .custom-marker i { font-size: 14px; color: white; }
-        .temp-marker { border: 2px dashed #ffeb3b; background-color: rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
+        .temp-marker { background-color: rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 235, 59, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); } }
 
+        /* Custom Scrollbar cho vùng vuốt */
+        .scrollable-area { overflow-y: auto; overscroll-behavior-y: contain; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
         
+        /* Overlays */
         #loading-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
-        
-        /* Lightbox cho xem ảnh to */
-        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100000; justify-content: center; align-items: center; flex-direction: column; padding: 20px;}
+        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100000; justify-content: center; align-items: center; flex-direction: column; padding: 10px;}
         #lightbox.active { display: flex; }
-        #lightbox img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        #lightbox-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; cursor: pointer; background: rgba(0,0,0,0.5); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        #lightbox img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        #lightbox-close { position: absolute; top: 15px; right: 15px; color: white; font-size: 24px; cursor: pointer; background: rgba(255,255,255,0.2); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        #custom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; padding: 16px;}
+        #custom-modal.active { display: flex; }
     </style>
 </head>
 <body>
@@ -53,149 +65,160 @@
     <!-- MÀN HÌNH CHỜ -->
     <div id="loading-overlay">
         <i class="fa-solid fa-satellite-dish text-5xl text-emerald-500 mb-4 animate-pulse"></i>
-        <h2 class="text-lg font-bold text-white tracking-widest uppercase mb-2 text-center px-4">Đang kết nối Máy Chủ...</h2>
-        <p class="text-slate-400 text-xs text-center" id="loading-text">Tải dữ liệu đồng bộ</p>
+        <h2 class="text-base md:text-lg font-bold text-white tracking-widest uppercase mb-2 text-center px-4">Đang đồng bộ dữ liệu...</h2>
+        <p class="text-slate-400 text-xs text-center" id="loading-text">Khởi tạo kết nối an toàn</p>
     </div>
 
     <!-- LIGHTBOX XEM ẢNH TO -->
     <div id="lightbox" onclick="closeLightbox()">
         <div id="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></div>
-        <img id="lightbox-img" src="" alt="Ảnh Cửa Hàng Bị Lỗi">
-        <p id="lightbox-caption" class="text-white mt-4 font-bold text-lg text-center"></p>
+        <img id="lightbox-img" src="" alt="Ảnh Cửa Hàng">
+        <p id="lightbox-caption" class="text-emerald-400 mt-4 font-bold text-sm md:text-lg text-center px-4"></p>
     </div>
 
-    <div id="app-screen">
-        <!-- Header (Gọn hơn trên Mobile) -->
-        <div class="mb-2 flex justify-between items-center bg-slate-800 p-2 md:p-4 rounded-lg border border-slate-700 shadow-lg shrink-0">
-            <div>
-                <h1 class="text-lg md:text-2xl font-bold text-emerald-400"><i class="fa-solid fa-map-location-dot mr-2"></i>HUNTKEY MAP</h1>
-                <p class="text-[10px] md:text-sm text-slate-400 flex items-center">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span> Đồng bộ Real-time
-                </p>
+    <!-- APP SHELL -->
+    <div id="app-wrapper">
+        
+        <!-- Header (Gọn nhẹ, không co giãn) -->
+        <header class="flex justify-between items-center bg-slate-800 p-2.5 md:p-4 rounded-lg border border-slate-700 shadow-md shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="bg-emerald-500/20 p-2 rounded-lg text-emerald-500">
+                    <i class="fa-solid fa-map-location-dot text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm md:text-xl font-bold text-white leading-tight">HUNTKEY MAP</h1>
+                    <p class="text-[10px] md:text-xs text-emerald-400 flex items-center mt-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live Sync
+                    </p>
+                </div>
             </div>
-            <div class="text-xs text-emerald-400 font-bold bg-slate-900 px-2 py-1 rounded border border-slate-700">
-                <i class="fa-solid fa-user-check"></i> <span class="hidden md:inline">Đang Online</span>
+            <div class="text-xs text-slate-300 bg-slate-900 px-2.5 py-1.5 rounded border border-slate-700 shadow-inner">
+                <i class="fa-regular fa-circle-user mr-1"></i> <span class="hidden md:inline">Online</span>
             </div>
-        </div>
+        </header>
 
-        <!-- Main Content (Layout phản hồi: Trên dưới cho Mobile, Trái phải cho PC) -->
-        <div class="flex-grow flex flex-col md:flex-row gap-2 overflow-hidden h-full">
+        <!-- Main Workspace -->
+        <main class="flex-1 flex flex-col md:flex-row gap-2 min-h-0">
             
-            <!-- THE MAP (Trên Mobile chiếm 40% màn hình, PC chiếm phần còn lại) -->
-            <div class="w-full h-[40vh] md:h-full md:flex-1 relative rounded-lg overflow-hidden border border-slate-700 shadow-xl shrink-0 md:shrink">
+            <!-- THE MAP (Trên Mobile chiếm 42%, PC chiếm phần còn lại) -->
+            <div class="w-full flex-[0_0_42%] md:flex-1 relative rounded-lg overflow-hidden border border-slate-700 shadow-md shrink-0">
                 <div id="map" class="absolute inset-0"></div>
+                <!-- Mini Legend -->
+                <div class="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur border border-slate-600 p-1.5 rounded text-[9px] z-[400] shadow">
+                    <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 border border-white/50"></div> <span class="text-white">Lên Đơn</span></div>
+                    <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5 border border-white/50"></div> <span class="text-white">Ghé Thăm</span></div>
+                    <div class="flex items-center"><div class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5 border border-white/50"></div> <span class="text-white">Mới</span></div>
+                </div>
             </div>
 
-            <!-- SIDEBAR PANEL (Trên Mobile chiếm 60% màn hình có cuộn, PC rộng 400px) -->
-            <div class="w-full md:w-[400px] h-[60vh] md:h-full bg-slate-800 rounded-lg p-0 border border-slate-700 flex flex-col overflow-hidden shrink-0 shadow-xl">
+            <!-- PANEL CHỨA DATA (List/Form) -->
+            <div class="flex-1 md:w-[420px] bg-slate-800 rounded-lg border border-slate-700 flex flex-col min-h-0 shadow-md">
                 
                 <!-- Tabs -->
-                <div class="flex border-b border-slate-700 shrink-0">
-                    <button id="tab-list-btn" onclick="window.switchTab('list')" class="flex-1 py-2.5 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 hover:bg-slate-700 transition text-sm"><i class="fa-solid fa-list md:mr-2"></i><span class="hidden md:inline">Danh Sách</span></button>
-                    <button id="tab-add-btn" onclick="window.switchTab('add')" class="flex-1 py-2.5 text-center font-bold text-slate-400 border-b-2 border-transparent hover:bg-slate-700 transition text-sm"><i class="fa-solid fa-plus-location md:mr-2"></i><span class="hidden md:inline">Thêm Điểm</span></button>
+                <div class="flex border-b border-slate-700 shrink-0 p-1 bg-slate-800/80">
+                    <button id="tab-list-btn" onclick="window.switchTab('list')" class="flex-1 py-2 text-center font-bold text-white bg-slate-700 rounded shadow-sm text-xs transition"><i class="fa-solid fa-list mr-1"></i>Danh Sách</button>
+                    <button id="tab-add-btn" onclick="window.switchTab('add')" class="flex-1 py-2 text-center font-bold text-slate-400 hover:text-white rounded text-xs transition"><i class="fa-solid fa-location-crosshairs mr-1"></i>Thêm/Sửa</button>
                 </div>
 
                 <!-- Tab Content: List & Filter -->
-                <div id="tab-list" class="flex-1 flex flex-col overflow-y-auto p-3">
+                <div id="tab-list" class="flex-1 flex flex-col overflow-hidden">
                     
-                    <!-- Search & Filter -->
-                    <div class="flex gap-2 mb-3 shrink-0">
-                        <div class="relative flex-1">
-                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
-                            <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm cửa hàng..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-8 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                    <!-- Vùng cố định ở trên của Tab List -->
+                    <div class="p-2 shrink-0 border-b border-slate-700 bg-slate-800/50">
+                        <div class="flex gap-2 mb-2">
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                                <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm tên, địa chỉ..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <input type="date" id="filter-date" onchange="window.renderAll()" class="w-[105px] bg-slate-900 border border-slate-600 text-white rounded px-1.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
                         </div>
-                        <input type="date" id="filter-date" onchange="window.renderAll()" class="w-[110px] bg-slate-900 border border-slate-600 text-white rounded px-1.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
-                    </div>
-
-                    <!-- Vẽ Tuyến -->
-                    <div class="flex gap-2 mb-2 shrink-0 border-b border-slate-700 pb-3">
-                        <button id="btn-draw-history" onclick="window.drawHistoryRoute()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow">
-                            <i class="fa-solid fa-route"></i> Xem Tuyến Đi
-                        </button>
-                        <button id="btn-draw-suggest" onclick="window.suggestRoute()" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Tuyến Gợi Ý AI
-                        </button>
-                    </div>
-
-                    <div class="flex justify-between items-center mb-1 shrink-0">
-                        <span class="text-[10px] text-slate-400 uppercase">Danh sách <span id="list-count" class="text-emerald-400 font-bold">0</span> điểm</span>
+                        <div class="flex gap-2">
+                            <button id="btn-draw-history" onclick="window.drawHistoryRoute()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600">
+                                <i class="fa-solid fa-route"></i> Vẽ Tuyến
+                            </button>
+                            <button id="btn-draw-suggest" onclick="window.suggestRoute()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Gợi Ý
+                            </button>
+                        </div>
                     </div>
                     
-                    <!-- Danh sách vuốt -->
-                    <div id="store-list" class="flex-1 flex flex-col gap-2 pr-1 pb-4">
-                        <!-- Populated by JS -->
+                    <!-- Vùng chứa danh sách CÓ THỂ CUỘN -->
+                    <div class="px-2 py-1 flex justify-between items-center bg-slate-900/50 shrink-0">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Kết quả: <span id="list-count" class="text-emerald-400 font-bold text-xs">0</span></span>
+                    </div>
+                    <div id="store-list" class="flex-1 scrollable-area flex flex-col gap-2 p-2">
+                        <!-- Thẻ cửa hàng sẽ chèn vào đây -->
                     </div>
                 </div>
 
-                <!-- Tab Content: Add/Edit -->
-                <div id="tab-add" class="hidden flex-1 flex flex-col overflow-y-auto p-3 bg-slate-800/50">
+                <!-- Tab Content: Add/Edit Form -->
+                <div id="tab-add" class="hidden flex-1 scrollable-area p-3 bg-slate-800">
                     
-                    <div class="flex gap-2 mb-3 shrink-0">
-                        <input type="text" id="search-address-input" placeholder="Gõ tên đường tìm tọa độ..." class="flex-1 bg-slate-900 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
-                        <button onclick="window.searchAddress(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-xs font-bold transition"><i class="fa-solid fa-location-crosshairs"></i> TÌM</button>
-                    </div>
-
-                    <form id="add-store-form" onsubmit="window.saveStore(event)" class="flex flex-col gap-2.5 pb-6">
+                    <!-- Form Container (Cho phép cuộn nội dung form nếu quá dài) -->
+                    <form id="add-store-form" onsubmit="window.saveStore(event)" class="flex flex-col gap-3 pb-8">
                         <input type="hidden" id="form-id">
                         <input type="hidden" id="form-lat">
                         <input type="hidden" id="form-lng">
-                        <input type="hidden" id="form-image-base64"> <!-- Chứa ảnh nén -->
+                        <input type="hidden" id="form-image-base64">
                         
-                        <div class="text-[11px] text-amber-400 font-semibold text-center bg-slate-900 rounded py-1 border border-amber-500/30" id="coords-display"><i class="fa-solid fa-hand-pointer mr-1"></i> Chạm lên bản đồ để lấy vị trí</div>
+                        <div class="text-[11px] text-amber-400 font-semibold text-center bg-slate-900 rounded py-1.5 border border-amber-500/30 shadow-inner" id="coords-display">
+                            <i class="fa-solid fa-hand-pointer mr-1 animate-bounce"></i> Chạm lên bản đồ để ghim vị trí
+                        </div>
 
-                        <!-- KHU VỰC CHỤP ẢNH TỐI ƯU -->
-                        <div class="bg-slate-700/50 border border-slate-600 rounded p-2">
-                            <label class="block text-[10px] font-semibold text-slate-400 mb-1">Ảnh Cửa Hàng (Bắt buộc/Tùy chọn)</label>
-                            <label class="flex justify-center items-center gap-2 cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-500 border-dashed text-slate-300 py-2 rounded text-xs transition">
-                                <i class="fa-solid fa-camera text-emerald-400"></i> Chụp Ảnh / Mở Thư Viện
-                                <!-- Thuộc tính capture="environment" gọi camera sau trên đt -->
+                        <!-- Khung Ảnh -->
+                        <div class="bg-slate-900/50 border border-slate-700 rounded p-2">
+                            <label class="block text-[10px] font-semibold text-slate-400 mb-1.5 uppercase">Ảnh Cửa Hàng <span class="text-slate-500 lowercase font-normal">(Chụp hoặc tải lên)</span></label>
+                            <label class="flex justify-center items-center gap-2 cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed text-slate-300 py-2.5 rounded text-xs transition shadow-sm">
+                                <i class="fa-solid fa-camera text-emerald-400 text-lg"></i> Mở Camera
                                 <input type="file" id="form-image" accept="image/*" capture="environment" class="hidden" onchange="window.handleImageUpload(event)">
                             </label>
                             
-                            <!-- Hiển thị ảnh sau khi nén -->
-                            <div id="image-preview-container" class="mt-2 hidden relative border border-slate-600 rounded overflow-hidden cursor-pointer" onclick="window.openLightbox(document.getElementById('image-preview').src, 'Ảnh Xem Trước')">
-                                <img id="image-preview" src="" class="w-full h-24 object-cover">
-                                <button type="button" onclick="event.stopPropagation(); window.removeImage()" class="absolute top-1 right-1 bg-red-600/90 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs backdrop-blur"><i class="fa-solid fa-xmark"></i></button>
-                                <div id="image-size-info" class="absolute bottom-0 right-0 bg-black/70 text-[9px] px-1 text-emerald-400">0 KB</div>
+                            <div id="image-preview-container" class="mt-2 hidden relative border border-slate-600 rounded overflow-hidden shadow-md">
+                                <img id="image-preview" src="" class="w-full h-28 object-cover cursor-pointer" onclick="window.openLightbox(this.src, 'Xem trước ảnh')">
+                                <button type="button" onclick="window.removeImage()" class="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow"><i class="fa-solid fa-xmark"></i></button>
+                                <div id="image-size-info" class="absolute bottom-1 left-1 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-emerald-400 font-mono">0 KB</div>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Tên Cửa Hàng <span class="text-red-500">*</span></label>
-                            <input type="text" id="form-name" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500" placeholder="Điện Nước Tuấn Anh">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Địa Chỉ <span class="text-red-500">*</span></label>
-                            <input type="text" id="form-address" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500" placeholder="15 Nguyễn Trãi">
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Ngày Đi <span class="text-red-500">*</span></label>
-                                <input type="date" id="form-date" required class="w-full bg-slate-700 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                        <!-- Input fields -->
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Tên Cửa Hàng <span class="text-red-500">*</span></label>
+                                <input type="text" id="form-name" required class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="VD: Tạp hóa cô Ba">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Địa Chỉ <span class="text-red-500">*</span></label>
+                                <div class="flex gap-1">
+                                    <input type="text" id="form-address" required class="flex-1 bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="Gõ để tìm hoặc nhập tay...">
+                                    <button type="button" onclick="window.searchAddress(event)" class="bg-slate-700 border border-slate-600 text-white px-3 rounded text-xs hover:bg-slate-600 transition"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                </div>
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Trạng Thái <span class="text-red-500">*</span></label>
-                                <select id="form-status" class="w-full bg-slate-700 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500 appearance-none font-semibold">
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Ngày Đi <span class="text-red-500">*</span></label>
+                                <input type="date" id="form-date" required class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Trạng Thái <span class="text-red-500">*</span></label>
+                                <select id="form-status" class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2 py-2 text-xs focus:outline-none focus:border-emerald-500 appearance-none font-semibold shadow-inner">
                                     <option value="chot" class="text-emerald-400">🟢 Đã Lên Đơn</option>
                                     <option value="ghetham" class="text-amber-400">🟠 Đang Chăm Sóc</option>
                                     <option value="moi" class="text-blue-400" selected>🔵 Data Mới</option>
                                     <option value="tu-choi" class="text-red-400">🔴 Từ chối</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Ghi Chú</label>
-                            <input type="text" id="form-note" class="w-full bg-slate-700 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500" placeholder="Số ĐT, thông tin thêm...">
+                            <div class="col-span-2">
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Ghi Chú</label>
+                                <textarea id="form-note" rows="2" class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner resize-none" placeholder="SĐT, phản hồi của khách..."></textarea>
+                            </div>
                         </div>
 
-                        <div class="flex gap-2 mt-2">
-                            <button type="submit" id="btn-submit-form" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded shadow transition uppercase text-xs">
+                        <!-- Buttons fixed ở dưới cùng form -->
+                        <div class="flex gap-2 mt-1">
+                            <button type="submit" id="btn-submit-form" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded shadow-lg transition uppercase text-xs">
                                 <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud
                             </button>
-                            <button type="button" onclick="window.clearForm()" class="flex-[1] bg-slate-600 hover:bg-slate-500 text-white font-semibold py-2.5 rounded transition text-xs">
-                                Hủy Bỏ
+                            <button type="button" onclick="window.clearForm()" class="flex-[1] bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-3 rounded border border-slate-600 transition text-xs">
+                                Hủy Form
                             </button>
                         </div>
                     </form>
@@ -206,12 +229,12 @@
 
     <!-- Modal Box -->
     <div id="custom-modal">
-        <div class="bg-slate-800 border border-slate-600 p-5 rounded-lg w-11/12 max-w-sm text-center shadow-2xl relative">
+        <div class="bg-slate-800 border border-slate-600 p-5 rounded-lg w-11/12 max-w-[320px] text-center shadow-2xl">
             <i id="modal-icon" class="fa-solid fa-circle-info text-3xl text-blue-400 mb-3"></i>
-            <h3 id="modal-title" class="text-base font-bold text-white mb-2">Thông báo</h3>
-            <p id="modal-msg" class="text-xs text-slate-300 mb-5">Nội dung.</p>
+            <h3 id="modal-title" class="text-sm font-bold text-white mb-2 uppercase">Thông báo</h3>
+            <p id="modal-msg" class="text-xs text-slate-300 mb-5 leading-relaxed">Nội dung.</p>
             <div class="flex gap-2 justify-center" id="modal-actions">
-                <button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs w-full">Đóng</button>
+                <button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs w-full border border-slate-500">Đóng</button>
             </div>
         </div>
     </div>
@@ -223,7 +246,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CẤU HÌNH API CHUẨN CỦA SẾP
+        // MÃ CỦA SẾP
         const firebaseConfig = {
             apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
             authDomain: "ducvufasttel.firebaseapp.com",
@@ -258,18 +281,18 @@
             const actions = document.getElementById('modal-actions');
             if (confirmCallback) {
                 actions.innerHTML = `
-                    <button id="modal-cancel" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs flex-1">Hủy</button>
-                    <button id="modal-confirm" class="bg-red-600 px-4 py-2 rounded text-white font-bold text-xs flex-1">Xác Nhận Xóa</button>
+                    <button id="modal-cancel" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs flex-1 border border-slate-500">Hủy</button>
+                    <button id="modal-confirm" class="bg-red-600 px-4 py-2 rounded text-white font-bold text-xs flex-1 shadow">Xác Nhận Xóa</button>
                 `;
                 document.getElementById('modal-cancel').onclick = () => document.getElementById('custom-modal').classList.remove('active');
                 document.getElementById('modal-confirm').onclick = () => { confirmCallback(); document.getElementById('custom-modal').classList.remove('active'); };
             } else {
-                actions.innerHTML = `<button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs w-full">Đóng</button>`;
+                actions.innerHTML = `<button onclick="document.getElementById('custom-modal').classList.remove('active')" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs w-full border border-slate-500">Đóng</button>`;
             }
             document.getElementById('custom-modal').classList.add('active');
         };
 
-        // Xem ảnh to
+        // Xem ảnh to (Lightbox)
         window.openLightbox = (src, title) => {
             if(!src) return;
             const lightbox = document.getElementById('lightbox');
@@ -282,7 +305,7 @@
             document.getElementById('lightbox').classList.remove('active');
         };
 
-        // KHỞI TẠO HỆ THỐNG
+        // KHỞI TẠO HỆ THỐNG CLOUD SYNC
         async function bootSystem() {
             try {
                 app = initializeApp(firebaseConfig);
@@ -298,11 +321,11 @@
                         setTimeout(() => { loadingOverlay.style.display = 'none'; }, 500);
                     } else {
                         signInAnonymously(auth).catch(err => {
-                            loadingText.innerHTML = `<span class="text-red-400">Lỗi truy cập: Hãy kiểm tra Firebase > Authentication > Anonymous đã Bật chưa.</span>`;
+                            loadingText.innerHTML = `<span class="text-red-400">Lỗi: Sếp nhớ bật Firebase Authentication > Anonymous nhé!</span>`;
                         });
                     }
                 });
-            } catch (err) { loadingText.innerHTML = `<span class="text-red-400">Lỗi: ${err.message}</span>`; }
+            } catch (err) { loadingText.innerHTML = `<span class="text-red-400">Lỗi mã API: Vui lòng kiểm tra lại.</span>`; }
         }
 
         function loadRealtimeData() {
@@ -315,15 +338,12 @@
             });
         }
 
-        // ==========================================
-        // KHỐI XỬ LÝ ẢNH (CANVAS COMPRESSION)
-        // ==========================================
+        // NÉN ẢNH SIÊU NHẸ
         window.handleImageUpload = (event) => {
             const file = event.target.files[0];
             if (!file) return;
 
-            // Hiển thị loading nhỏ trên box ảnh
-            document.getElementById('image-size-info').innerText = "Đang nén...";
+            document.getElementById('image-size-info').innerText = "Đang xử lý...";
             document.getElementById('image-preview-container').classList.remove('hidden');
             
             const reader = new FileReader();
@@ -332,9 +352,8 @@
                 const img = new Image();
                 img.src = e.target.result;
                 img.onload = () => {
-                    // Thuật toán ép dung lượng (Chiều rộng max 500px, quality 0.6)
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 500; 
+                    const MAX_WIDTH = 600; // Giới hạn pixel để tải nhanh
                     let width = img.width;
                     let height = img.height;
 
@@ -348,16 +367,10 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Chuyển thành chuỗi Base64
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                    
-                    // Lưu chuỗi vào form ẩn
                     document.getElementById('form-image-base64').value = compressedBase64;
-                    
-                    // Hiển thị ra UI
                     document.getElementById('image-preview').src = compressedBase64;
                     
-                    // Tính dung lượng ảo (để test xem ép sâu chưa)
                     const sizeKB = Math.round((compressedBase64.length * 3 / 4) / 1024);
                     document.getElementById('image-size-info').innerText = sizeKB + " KB";
                 };
@@ -370,18 +383,17 @@
             document.getElementById('image-preview').src = '';
             document.getElementById('image-preview-container').classList.add('hidden');
         };
-        // ==========================================
 
         window.saveStore = async (e) => {
             e.preventDefault();
-            if(!currentUser) return window.showModal("Lỗi", "Chưa kết nối máy chủ.", "error");
+            if(!currentUser) return window.showModal("Lỗi", "Chưa kết nối Cloud.", "error");
 
             const idInput = document.getElementById('form-id').value;
             const lat = document.getElementById('form-lat').value;
             const lng = document.getElementById('form-lng').value;
-            const base64Image = document.getElementById('form-image-base64').value; // Lấy ảnh đã nén
+            const base64Image = document.getElementById('form-image-base64').value; 
             
-            if(!lat || !lng) return window.showModal("Lỗi", "Hãy chạm bản đồ để ghim vị trí cửa hàng!", "warning");
+            if(!lat || !lng) return window.showModal("Ghi chú", "Hãy CHẠM LÊN BẢN ĐỒ để ghim tọa độ trước khi lưu!", "warning");
 
             const docId = idInput ? idInput.toString() : Date.now().toString();
             const storeObj = {
@@ -390,30 +402,29 @@
                 date: document.getElementById('form-date').value,
                 status: document.getElementById('form-status').value,
                 note: document.getElementById('form-note').value.trim(),
-                image: base64Image, // Đẩy ảnh lên Cloud
+                image: base64Image, 
                 lat: parseFloat(lat), 
                 lng: parseFloat(lng)
             };
 
             const btn = document.getElementById('btn-submit-form');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang tải...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang tải lên...';
             btn.disabled = true;
 
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores', docId), storeObj);
-                window.showModal("Xong", `Đã lưu <b>${storeObj.name}</b> lên bản đồ chung.`, "success");
-                
                 if(tempMarker) map.removeLayer(tempMarker);
                 window.clearForm();
                 document.getElementById('filter-date').value = storeObj.date;
                 window.switchTab('list');
-            } catch (err) { window.showModal("Lỗi", "Lỗi tải lên: " + err.message, "error"); } 
+                // Nhắc nhẹ nhành bằng toast hoặc khỏi nhắc cho đỡ rối
+            } catch (err) { window.showModal("Lỗi", "Tải lên thất bại.", "error"); } 
             finally { btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud'; btn.disabled = false; }
         };
 
         window.deleteStore = (id) => {
             const store = storeData.find(s => s.id === id);
-            window.showModal("Xóa", `Xóa vĩnh viễn <b>${store?.name}</b> trên máy tất cả mọi người?`, "warning", async () => {
+            window.showModal("Xóa dữ liệu", `Xóa điểm <b>${store?.name}</b> trên toàn hệ thống?`, "warning", async () => {
                 try {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores', id.toString()));
                     map.closePopup();
@@ -422,8 +433,8 @@
         };
 
         function initMap() {
-            // Sử dụng setView và giữ lại zoom mặc định nhưng cho phép thay đổi
-            map = L.map('map').setView([21.0000, 105.7900], 13);
+            map = L.map('map', { zoomControl: false }).setView([21.0000, 105.7900], 12); 
+            L.control.zoom({ position: 'topright' }).addTo(map); // Nút zoom đưa lên góc phải
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
             markersLayer = L.layerGroup().addTo(map);
@@ -441,19 +452,18 @@
             else if (status === 'ghetham') { bgColor = '#f59e0b'; iconClass = 'fa-shoe-prints'; }
             else if (status === 'tu-choi') { bgColor = '#ef4444'; iconClass = 'fa-xmark'; }
             
-            // Nếu có ảnh, cho viền icon sáng lên một chút để phân biệt
-            let borderStyle = hasImage ? 'border: 2px solid #fff; box-shadow: 0 0 10px #fff;' : 'border: 2px solid rgba(255,255,255,0.5);';
+            let borderStyle = hasImage ? 'border: 2px solid #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8);' : 'border: 2px solid rgba(255,255,255,0.4);';
 
             return L.divIcon({
                 className: 'custom-icon',
-                html: `<div class="custom-marker" style="background-color: ${bgColor}; width: 30px; height: 30px; ${borderStyle}"><i class="fa-solid ${iconClass}"></i></div>`,
-                iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15]
+                html: `<div class="custom-marker" style="background-color: ${bgColor}; width: 28px; height: 28px; ${borderStyle}"><i class="fa-solid ${iconClass}" style="font-size: 12px;"></i></div>`,
+                iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
             });
         }
 
         function getStatusBadge(status) {
             if (status === 'chot') return '<span class="badge chot"><i class="fa-solid fa-check"></i> Đã Chốt</span>';
-            if (status === 'ghetham') return '<span class="badge ghetham"><i class="fa-solid fa-shoe-prints"></i> Đã Đến</span>';
+            if (status === 'ghetham') return '<span class="badge ghetham"><i class="fa-solid fa-shoe-prints"></i> Ghé Thăm</span>';
             if (status === 'moi') return '<span class="badge moi">Mới</span>';
             return '<span class="badge tu-choi">Từ chối</span>';
         }
@@ -480,51 +490,54 @@
                 const hasImg = !!store.image;
                 const marker = L.marker([store.lat, store.lng], { icon: createCustomIcon(store.status, hasImg) }).addTo(markersLayer);
                 
-                // HIỂN THỊ ẢNH TRONG POPUP BẢN ĐỒ VÀ MỞ LIGHTBOX KHI CLICK
-                let imgHtml = '';
-                if (hasImg) {
-                    imgHtml = `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-full h-24 object-cover mb-2 border-b border-slate-700 cursor-pointer hover:opacity-90">`;
-                }
-
+                // POPUP TRÊN BẢN ĐỒ
+                let imgHtml = hasImg ? `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-full h-24 object-cover border-b border-slate-700 cursor-pointer">` : '';
+                
                 const popupHtml = `
                     <div class="w-48">
                         ${imgHtml}
-                        <div class="px-2 pb-2">
-                            <h3 class="truncate">${store.name}</h3>
-                            <p><i class="fa-solid fa-location-dot w-4"></i> ${store.address}</p>
-                            ${store.note ? `<p class="italic text-amber-400"><i class="fa-solid fa-comment-dots w-4"></i> ${store.note}</p>` : ''}
+                        <div class="px-2 pb-2 mt-2">
+                            <h3 class="truncate" title="${store.name}">${store.name}</h3>
+                            <p><i class="fa-solid fa-location-dot w-3 text-slate-400"></i> ${store.address}</p>
+                            ${store.note ? `<p class="italic text-amber-400 mt-1"><i class="fa-solid fa-comment-dots w-3"></i> ${store.note}</p>` : ''}
                             <div class="mt-2 border-t border-slate-600 pt-2 flex justify-between items-center">
                                 ${getStatusBadge(store.status)}
-                                <button onclick="window.editStore('${store.id}')" class="text-blue-400 text-xs"><i class="fa-solid fa-pen"></i> Sửa</button>
+                                <button onclick="window.editStore('${store.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs"><i class="fa-solid fa-pen"></i> Sửa</button>
                             </div>
                         </div>
                     </div>
                 `;
-                marker.bindPopup(popupHtml, { maxWidth: 200, padding: 0 });
+                marker.bindPopup(popupHtml, { maxWidth: 220, padding: 0 });
 
-                let borderColor = store.status === 'chot' ? 'border-emerald-500/50' : 'border-slate-600';
+                let borderColor = store.status === 'chot' ? 'border-emerald-500/50' : 'border-slate-700';
                 
                 const listItem = document.createElement('div');
-                listItem.className = `p-2.5 rounded bg-slate-800 border ${borderColor} flex gap-2 hover:bg-slate-700 transition duration-200`;
+                listItem.className = `p-2 rounded-lg bg-slate-900 border ${borderColor} flex gap-2.5 items-center shadow-sm`;
                 
-                // THUMBNAIL CHO DANH SÁCH VÀ MỞ LIGHTBOX
+                // THUMBNAIL LIST
                 let listImgHtml = hasImg 
-                    ? `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-12 h-12 object-cover rounded border border-slate-600 shrink-0 cursor-pointer">` 
-                    : `<div class="w-12 h-12 rounded bg-slate-900 border border-slate-700 shrink-0 flex items-center justify-center text-slate-600 cursor-pointer" onclick="window.focusStore(${store.lat}, ${store.lng})"><i class="fa-solid fa-store"></i></div>`;
+                    ? `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-14 h-14 object-cover rounded border border-slate-600 shrink-0 cursor-pointer">` 
+                    : `<div class="w-14 h-14 rounded bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center text-slate-500" onclick="window.focusStore(${store.lat}, ${store.lng})"><i class="fa-solid fa-store text-xl"></i></div>`;
+
+                let displayStoreName = store.name;
+                if(searchKeyword && store.name.toLowerCase().includes(searchKeyword)) {
+                    const regex = new RegExp(`(${searchKeyword})`, 'gi');
+                    displayStoreName = store.name.replace(regex, '<span class="bg-amber-500 text-slate-900 px-0.5 rounded">$1</span>');
+                }
 
                 listItem.innerHTML = `
                     ${listImgHtml}
-                    <div class="flex-1 flex flex-col justify-center min-w-0 cursor-pointer" onclick="window.focusStore(${store.lat}, ${store.lng})">
-                        <div class="font-bold text-xs text-emerald-400 truncate pr-1">${store.name}</div>
-                        <div class="text-[10px] text-slate-300 truncate">${store.address}</div>
-                        <div class="flex justify-between items-center mt-1 pr-1">
+                    <div class="flex-1 flex flex-col justify-center min-w-0" onclick="window.focusStore(${store.lat}, ${store.lng})">
+                        <div class="font-bold text-[13px] text-emerald-400 truncate">${displayStoreName}</div>
+                        <div class="text-[10px] text-slate-400 truncate mt-0.5">${store.address}</div>
+                        <div class="flex justify-between items-center mt-1.5">
                             ${getStatusBadge(store.status)}
-                            <span class="text-[9px] text-slate-500">${store.date}</span>
+                            <span class="text-[9px] text-slate-500 bg-slate-800 px-1 rounded">${store.date}</span>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-1 justify-center pl-1 border-l border-slate-700">
-                        <button onclick="window.editStore('${store.id}')" class="text-blue-400 p-1"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="window.deleteStore('${store.id}')" class="text-red-400 p-1"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flex flex-col gap-1 justify-center pl-1 border-l border-slate-700 shrink-0">
+                        <button onclick="window.editStore('${store.id}')" class="bg-blue-900/50 text-blue-400 p-1.5 rounded"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="window.deleteStore('${store.id}')" class="bg-red-900/50 text-red-400 p-1.5 rounded"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
                 listContainer.appendChild(listItem);
@@ -548,12 +561,11 @@
             document.getElementById('form-status').value = store.status;
             document.getElementById('form-note').value = store.note || '';
             
-            // Xử lý ảnh khi bấm Sửa
             if(store.image) {
                 document.getElementById('form-image-base64').value = store.image;
                 document.getElementById('image-preview').src = store.image;
                 document.getElementById('image-preview-container').classList.remove('hidden');
-                document.getElementById('image-size-info').innerText = "Ảnh cũ";
+                document.getElementById('image-size-info').innerText = "Đã có ảnh";
             } else {
                 window.removeImage();
             }
@@ -570,13 +582,16 @@
             tempMarker = L.marker([lat, lng], {icon: tempIcon}).addTo(map);
             document.getElementById('form-lat').value = lat; document.getElementById('form-lng').value = lng;
             document.getElementById('coords-display').innerHTML = `<i class="fa-solid fa-location-dot"></i> Đã ghim: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            document.getElementById('coords-display').className = "text-[11px] text-emerald-400 font-bold bg-slate-900 rounded py-1 border border-emerald-500/30 text-center";
+            document.getElementById('coords-display').className = "text-[11px] text-emerald-400 font-bold bg-slate-900 rounded py-1.5 border border-emerald-500/30 text-center shadow-inner";
         };
 
         window.searchAddress = async (e) => {
             e.preventDefault();
             const query = document.getElementById('search-address-input').value;
-            if(!query) return;
+            if(!query) return window.showModal("Chú ý", "Gõ tên đường vào nhé Sếp.", "info");
+            
+            document.getElementById('form-address').value = query; // Auto điền tạm
+            
             const btn = e.currentTarget;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             try {
@@ -586,7 +601,7 @@
                     map.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 16);
                     window.placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
-                } else window.showModal("Không thấy", "Chạm trực tiếp lên bản đồ cho nhanh Sếp ạ.", "warning");
+                }
             } catch (err) {} finally { btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> TÌM'; }
         };
 
@@ -596,8 +611,8 @@
             document.getElementById('form-date').value = todayStr;
             window.removeImage();
             document.getElementById('btn-submit-form').innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud';
-            document.getElementById('coords-display').innerHTML = '<i class="fa-solid fa-hand-pointer mr-1"></i> Chạm lên bản đồ để lấy vị trí';
-            document.getElementById('coords-display').className = "text-[11px] text-amber-400 font-semibold text-center bg-slate-900 rounded py-1 border border-amber-500/30";
+            document.getElementById('coords-display').innerHTML = '<i class="fa-solid fa-hand-pointer mr-1 animate-bounce"></i> Chạm lên bản đồ để ghim vị trí';
+            document.getElementById('coords-display').className = "text-[11px] text-amber-400 font-semibold text-center bg-slate-900 rounded py-1.5 border border-amber-500/30 shadow-inner";
             if(tempMarker) map.removeLayer(tempMarker);
         };
 
@@ -607,34 +622,51 @@
             currentMode = tab;
             const tListBtn = document.getElementById('tab-list-btn'), tAddBtn = document.getElementById('tab-add-btn');
             const tList = document.getElementById('tab-list'), tAdd = document.getElementById('tab-add');
+            
+            // Xóa active class
+            tListBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-white rounded text-xs transition";
+            tAddBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-white rounded text-xs transition";
+            
             if(tab === 'list') {
-                tListBtn.className = "flex-1 py-2.5 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 transition text-sm";
-                tAddBtn.className = "flex-1 py-2.5 text-center font-bold text-slate-400 border-b-2 border-transparent transition text-sm";
+                tListBtn.className = "flex-1 py-2 text-center font-bold text-white bg-slate-700 rounded shadow-sm text-xs transition";
                 tList.classList.remove('hidden'); tAdd.classList.add('hidden');
                 if(tempMarker) map.removeLayer(tempMarker);
             } else {
-                tAddBtn.className = "flex-1 py-2.5 text-center font-bold text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/50 transition text-sm";
-                tListBtn.className = "flex-1 py-2.5 text-center font-bold text-slate-400 border-b-2 border-transparent transition text-sm";
+                tAddBtn.className = "flex-1 py-2 text-center font-bold text-white bg-slate-700 rounded shadow-sm text-xs transition";
                 tAdd.classList.remove('hidden'); tList.classList.add('hidden');
-                setTimeout(() => map.invalidateSize(), 100);
+                setTimeout(() => map.invalidateSize(), 200);
             }
         };
 
         window.drawHistoryRoute = () => {
-            if (routeLine) { map.removeLayer(routeLine); routeLine = null; return; }
+            if (routeLine) { 
+                map.removeLayer(routeLine); routeLine = null; 
+                document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-route"></i> Vẽ Tuyến';
+                document.getElementById('btn-draw-history').className = "flex-1 bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600";
+                return; 
+            }
             let dataToDraw = document.getElementById('filter-date').value ? storeData.filter(s => s.date === document.getElementById('filter-date').value) : storeData;
             dataToDraw = dataToDraw.filter(s => s.status === 'ghetham' || s.status === 'chot');
-            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Đến/Lên Đơn trong ngày.", "warning");
+            
+            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Ghé Thăm/Lên Đơn trong ngày để nối thành đường.", "warning");
             
             dataToDraw.sort((a,b) => a.id - b.id);
             routeLine = L.polyline(dataToDraw.map(s => [s.lat, s.lng]), { color: '#f59e0b', weight: 4, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(map);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+            
+            document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-eye-slash"></i> Tắt Tuyến';
+            document.getElementById('btn-draw-history').className = "flex-1 bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
         };
 
         window.suggestRoute = () => {
-            if (routeLine) { map.removeLayer(routeLine); routeLine = null; return; }
+            if (routeLine) { 
+                map.removeLayer(routeLine); routeLine = null; 
+                document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> AI Gợi Ý';
+                document.getElementById('btn-draw-suggest').className = "flex-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600";
+                return; 
+            }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để tính toán.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để tính toán tuyến.", "warning");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -650,7 +682,9 @@
             routeLine = L.polyline(route.map(s => [s.lat, s.lng]), { color: '#d946ef', weight: 4, opacity: 0.9, lineJoin: 'round' }).addTo(map);
             let dashOffset = 0; setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("AI Suggest", `Lộ trình cho ${route.length} khách cũ.`, "success");
+            
+            document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-eraser"></i> Xóa Gợi Ý';
+            document.getElementById('btn-draw-suggest').className = "flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
         };
 
         window.onload = bootSystem;
