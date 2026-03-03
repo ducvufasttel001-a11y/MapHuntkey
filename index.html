@@ -299,7 +299,7 @@ const firebaseConfig = {
                     await signInWithEmailAndPassword(auth, email, pass);
                     
                     // Code Demo chạy tạm trên Web thường (vì Sếp chưa gắn Config)
-                    await signInAnonymously(auth); 
+                    //await signInAnonymously(auth); 
                 }
             } catch (error) {
                 document.getElementById('login-error').classList.remove('hidden');
@@ -608,3 +608,4 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
+
