@@ -202,12 +202,23 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
     <script type="module">
+        // CHỈ SỬ DỤNG PHIÊN BẢN GSTATIC.COM CỦA FIREBASE CHO WEB
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // MÃ FIREBASE CHUẨN XÁC ĐÃ TRÍCH XUẤT TỪ ẢNH CỦA SẾP
-      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        // DÁN ĐOẠN CODE BẠN VỪA COPY TỪ FIREBASE VÀO NGAY DƯỚI DÒNG NÀY:
+        // (Chú ý: Code phải có dạng const firebaseConfig = { ... };)
+        // ---------------------------------------------------------
+        
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
   authDomain: "ducvufasttel.firebaseapp.com",
@@ -217,6 +228,14 @@ const firebaseConfig = {
   appId: "1:1053505435431:web:00163870489d2312329b02",
   measurementId: "G-SCN84DYTE9"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+        // ---------------------------------------------------------
+        // (ĐẾN ĐÂY THÔI NHÉ! BỎ CÁC DÒNG IMPORT TỪ FIREBASE/APP NẾU CÓ)
+
+
         const appId = 'huntkey-map-app';
 
         const app = initializeApp(firebaseConfig);
@@ -276,7 +295,9 @@ const firebaseConfig = {
                 } else if (error.code === 'auth/operation-not-allowed') {
                     errorBox.innerText = "❌ Lỗi hệ thống: Chưa bật đăng nhập Email trong Firebase.";
                 } else if (error.code === 'auth/api-key-not-valid') {
-                    errorBox.innerText = "❌ Lỗi: Mã kết nối máy chủ (API Key) không hợp lệ.";
+                    errorBox.innerText = "❌ Lỗi: Mã kết nối máy chủ (API Key) không hợp lệ. Vui lòng copy lại mã từ Firebase.";
+                } else if (error.message.includes('domain') || error.code === 'auth/unauthorized-domain') {
+                    errorBox.innerText = "❌ Lỗi tên miền: Hãy chắc chắn đã thêm tên miền vào Firebase.";
                 } else {
                     errorBox.innerText = "❌ Lỗi kết nối: " + error.message;
                 }
@@ -559,4 +580,3 @@ const firebaseConfig = {
     </script>
 </body>
 </html>
-
