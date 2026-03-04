@@ -3,30 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Huntkey Route Manager - Mobile App</title>
+    <title>Fasttel Map - Mobile App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* CSS Reset chuẩn cho Mobile Web App */
         html, body { 
-            height: 100%; 
-            width: 100%; 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden; /* Cấm cuộn toàn trang */
-            background-color: #0f172a; 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* Ngăn highlight khi chạm trên mobile */
+            height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; 
+            background-color: #0f172a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             -webkit-tap-highlight-color: transparent; 
         }
         
-        /* Cấu trúc lõi */
         #app-wrapper { display: flex; flex-direction: column; height: 100%; width: 100%; padding: 8px; box-sizing: border-box; gap: 8px; }
         @media (min-width: 768px) { #app-wrapper { padding: 16px; gap: 16px; } }
 
-        /* Map Styles */
         .leaflet-popup-content-wrapper { background-color: #1e293b; color: white; border: 1px solid #334155; padding: 0; overflow: hidden; border-radius: 8px;}
         .leaflet-popup-tip { background-color: #1e293b; }
         .leaflet-popup-content { margin: 8px; }
@@ -44,13 +34,11 @@
         .temp-marker { background-color: rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 235, 59, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); } }
 
-        /* Custom Scrollbar cho vùng vuốt */
         .scrollable-area { overflow-y: auto; overscroll-behavior-y: contain; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
         
-        /* Overlays */
         #loading-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
         #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100000; justify-content: center; align-items: center; flex-direction: column; padding: 10px;}
         #lightbox.active { display: flex; }
@@ -62,31 +50,26 @@
 </head>
 <body>
 
-    <!-- MÀN HÌNH CHỜ -->
     <div id="loading-overlay">
         <i class="fa-solid fa-satellite-dish text-5xl text-emerald-500 mb-4 animate-pulse"></i>
         <h2 class="text-base md:text-lg font-bold text-white tracking-widest uppercase mb-2 text-center px-4">Đang đồng bộ dữ liệu...</h2>
         <p class="text-slate-400 text-xs text-center" id="loading-text">Khởi tạo kết nối an toàn</p>
     </div>
 
-    <!-- LIGHTBOX XEM ẢNH TO -->
     <div id="lightbox" onclick="closeLightbox()">
         <div id="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></div>
         <img id="lightbox-img" src="" alt="Ảnh Cửa Hàng">
         <p id="lightbox-caption" class="text-emerald-400 mt-4 font-bold text-sm md:text-lg text-center px-4"></p>
     </div>
 
-    <!-- APP SHELL -->
     <div id="app-wrapper">
-        
-        <!-- Header (Gọn nhẹ, không co giãn) -->
         <header class="flex justify-between items-center bg-slate-800 p-2.5 md:p-4 rounded-lg border border-slate-700 shadow-md shrink-0">
             <div class="flex items-center gap-2">
                 <div class="bg-emerald-500/20 p-2 rounded-lg text-emerald-500">
                     <i class="fa-solid fa-map-location-dot text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-sm md:text-xl font-bold text-white leading-tight">HUNTKEY MAP</h1>
+                    <h1 class="text-sm md:text-xl font-bold text-white leading-tight tracking-wider">FASTTEL MAP</h1>
                     <p class="text-[10px] md:text-xs text-emerald-400 flex items-center mt-0.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live Sync
                     </p>
@@ -97,13 +80,16 @@
             </div>
         </header>
 
-        <!-- Main Workspace -->
         <main class="flex-1 flex flex-col md:flex-row gap-2 min-h-0">
             
-            <!-- THE MAP (Trên Mobile chiếm 42%, PC chiếm phần còn lại) -->
             <div class="w-full flex-[0_0_42%] md:flex-1 relative rounded-lg overflow-hidden border border-slate-700 shadow-md shrink-0">
                 <div id="map" class="absolute inset-0"></div>
-                <!-- Mini Legend -->
+                
+                <!-- NÚT GPS -->
+                <button onclick="window.locateUser()" class="absolute bottom-14 right-2 bg-slate-800/90 text-emerald-400 border border-slate-600 w-10 h-10 rounded-lg shadow-lg z-[400] flex justify-center items-center backdrop-blur hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-crosshairs text-lg"></i>
+                </button>
+
                 <div class="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur border border-slate-600 p-1.5 rounded text-[9px] z-[400] shadow">
                     <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 border border-white/50"></div> <span class="text-white">Lên Đơn</span></div>
                     <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5 border border-white/50"></div> <span class="text-white">Ghé Thăm</span></div>
@@ -111,24 +97,19 @@
                 </div>
             </div>
 
-            <!-- PANEL CHỨA DATA (List/Form) -->
             <div class="flex-1 md:w-[420px] bg-slate-800 rounded-lg border border-slate-700 flex flex-col min-h-0 shadow-md">
                 
-                <!-- Tabs -->
                 <div class="flex border-b border-slate-700 shrink-0 p-1 bg-slate-800/80">
                     <button id="tab-list-btn" onclick="window.switchTab('list')" class="flex-1 py-2 text-center font-bold text-white bg-slate-700 rounded shadow-sm text-xs transition"><i class="fa-solid fa-list mr-1"></i>Danh Sách</button>
                     <button id="tab-add-btn" onclick="window.switchTab('add')" class="flex-1 py-2 text-center font-bold text-slate-400 hover:text-white rounded text-xs transition"><i class="fa-solid fa-location-crosshairs mr-1"></i>Thêm/Sửa</button>
                 </div>
 
-                <!-- Tab Content: List & Filter -->
                 <div id="tab-list" class="flex-1 flex flex-col overflow-hidden">
-                    
-                    <!-- Vùng cố định ở trên của Tab List -->
                     <div class="p-2 shrink-0 border-b border-slate-700 bg-slate-800/50">
                         <div class="flex gap-2 mb-2">
                             <div class="relative flex-1">
                                 <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
-                                <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm tên, địa chỉ..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm tên, địa chỉ (không dấu)..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
                             </div>
                             <input type="date" id="filter-date" onchange="window.renderAll()" class="w-[105px] bg-slate-900 border border-slate-600 text-white rounded px-1.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
                         </div>
@@ -142,19 +123,24 @@
                         </div>
                     </div>
                     
-                    <!-- Vùng chứa danh sách CÓ THỂ CUỘN -->
                     <div class="px-2 py-1 flex justify-between items-center bg-slate-900/50 shrink-0">
                         <span class="text-[10px] text-slate-400 uppercase font-semibold">Kết quả: <span id="list-count" class="text-emerald-400 font-bold text-xs">0</span></span>
                     </div>
-                    <div id="store-list" class="flex-1 scrollable-area flex flex-col gap-2 p-2">
-                        <!-- Thẻ cửa hàng sẽ chèn vào đây -->
+                    <div id="store-list" class="flex-1 scrollable-area flex flex-col gap-2 p-2 pb-4">
+                        <!-- Danh sách cửa hàng -->
                     </div>
                 </div>
 
-                <!-- Tab Content: Add/Edit Form -->
                 <div id="tab-add" class="hidden flex-1 scrollable-area p-3 bg-slate-800">
                     
-                    <!-- Form Container (Cho phép cuộn nội dung form nếu quá dài) -->
+                    <div class="bg-slate-700/50 p-2.5 rounded-lg border border-slate-600 mb-3">
+                        <label class="block text-[10px] font-semibold text-emerald-400 mb-1.5 uppercase">Bước 1: Tìm vị trí (Hoặc chạm bản đồ)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="search-address-input" placeholder="Tên đường, phường, quận..." class="flex-1 bg-slate-900 border border-slate-600 text-white rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500 shadow-inner">
+                            <button type="button" onclick="window.searchAddress(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow"><i class="fa-solid fa-location-crosshairs"></i> TÌM</button>
+                        </div>
+                    </div>
+
                     <form id="add-store-form" onsubmit="window.saveStore(event)" class="flex flex-col gap-3 pb-8">
                         <input type="hidden" id="form-id">
                         <input type="hidden" id="form-lat">
@@ -165,7 +151,6 @@
                             <i class="fa-solid fa-hand-pointer mr-1 animate-bounce"></i> Chạm lên bản đồ để ghim vị trí
                         </div>
 
-                        <!-- Khung Ảnh -->
                         <div class="bg-slate-900/50 border border-slate-700 rounded p-2">
                             <label class="block text-[10px] font-semibold text-slate-400 mb-1.5 uppercase">Ảnh Cửa Hàng <span class="text-slate-500 lowercase font-normal">(Chụp hoặc tải lên)</span></label>
                             <label class="flex justify-center items-center gap-2 cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed text-slate-300 py-2.5 rounded text-xs transition shadow-sm">
@@ -180,18 +165,14 @@
                             </div>
                         </div>
 
-                        <!-- Input fields -->
                         <div class="grid grid-cols-2 gap-2.5">
                             <div class="col-span-2">
                                 <label class="block text-[10px] font-semibold text-slate-400 mb-1">Tên Cửa Hàng <span class="text-red-500">*</span></label>
                                 <input type="text" id="form-name" required class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="VD: Tạp hóa cô Ba">
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Địa Chỉ <span class="text-red-500">*</span></label>
-                                <div class="flex gap-1">
-                                    <input type="text" id="form-address" required class="flex-1 bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="Gõ để tìm hoặc nhập tay...">
-                                    <button type="button" onclick="window.searchAddress(event)" class="bg-slate-700 border border-slate-600 text-white px-3 rounded text-xs hover:bg-slate-600 transition"><i class="fa-solid fa-magnifying-glass"></i></button>
-                                </div>
+                                <label class="block text-[10px] font-semibold text-slate-400 mb-1">Địa Chỉ Thực Tế <span class="text-red-500">*</span></label>
+                                <input type="text" id="form-address" required class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="VD: 15 Nguyễn Trãi, Thanh Xuân">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-semibold text-slate-400 mb-1">Ngày Đi <span class="text-red-500">*</span></label>
@@ -212,7 +193,6 @@
                             </div>
                         </div>
 
-                        <!-- Buttons fixed ở dưới cùng form -->
                         <div class="flex gap-2 mt-1">
                             <button type="submit" id="btn-submit-form" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded shadow-lg transition uppercase text-xs">
                                 <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud
@@ -227,7 +207,6 @@
         </div>
     </div>
 
-    <!-- Modal Box -->
     <div id="custom-modal">
         <div class="bg-slate-800 border border-slate-600 p-5 rounded-lg w-11/12 max-w-[320px] text-center shadow-2xl">
             <i id="modal-icon" class="fa-solid fa-circle-info text-3xl text-blue-400 mb-3"></i>
@@ -246,7 +225,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // MÃ CỦA SẾP
         const firebaseConfig = {
             apiKey: "AIzaSyD-albgXodpHBxwlrySvXaPw8M1EJalPkM",
             authDomain: "ducvufasttel.firebaseapp.com",
@@ -260,7 +238,7 @@
 
         let app, auth, db;
         let storeData = [];
-        let map, markersLayer, tempMarker, routeLine;
+        let map, markersLayer, tempMarker, routeLine, userLocationMarker;
         let currentMode = 'list';
         const todayStr = new Date().toISOString().split('T')[0];
         let unsubscribeDb = null;
@@ -269,6 +247,26 @@
         const loadingOverlay = document.getElementById('loading-overlay');
         const loadingText = document.getElementById('loading-text');
         
+        // HÀM HỖ TRỢ TÌM KIẾM TIẾNG VIỆT KHÔNG DẤU
+        function removeVietnameseTones(str) {
+            if(!str) return "";
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a"); 
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e"); 
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i"); 
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o"); 
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u"); 
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y"); 
+            str = str.replace(/đ/g,"d");
+            str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+            str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+            str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+            str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+            str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+            str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+            str = str.replace(/Đ/g, "D");
+            return str.toLowerCase();
+        }
+
         window.showModal = (title, msg, type = 'info', confirmCallback = null) => {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-msg').innerHTML = msg;
@@ -292,7 +290,6 @@
             document.getElementById('custom-modal').classList.add('active');
         };
 
-        // Xem ảnh to (Lightbox)
         window.openLightbox = (src, title) => {
             if(!src) return;
             const lightbox = document.getElementById('lightbox');
@@ -305,7 +302,6 @@
             document.getElementById('lightbox').classList.remove('active');
         };
 
-        // KHỞI TẠO HỆ THỐNG CLOUD SYNC
         async function bootSystem() {
             try {
                 app = initializeApp(firebaseConfig);
@@ -338,7 +334,6 @@
             });
         }
 
-        // NÉN ẢNH SIÊU NHẸ
         window.handleImageUpload = (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -353,7 +348,7 @@
                 img.src = e.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 600; // Giới hạn pixel để tải nhanh
+                    const MAX_WIDTH = 600; 
                     let width = img.width;
                     let height = img.height;
 
@@ -417,7 +412,6 @@
                 window.clearForm();
                 document.getElementById('filter-date').value = storeObj.date;
                 window.switchTab('list');
-                // Nhắc nhẹ nhành bằng toast hoặc khỏi nhắc cho đỡ rối
             } catch (err) { window.showModal("Lỗi", "Tải lên thất bại.", "error"); } 
             finally { btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud'; btn.disabled = false; }
         };
@@ -434,7 +428,7 @@
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([21.0000, 105.7900], 12); 
-            L.control.zoom({ position: 'topright' }).addTo(map); // Nút zoom đưa lên góc phải
+            L.control.zoom({ position: 'topright' }).addTo(map); 
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
             markersLayer = L.layerGroup().addTo(map);
@@ -445,6 +439,31 @@
             document.getElementById('filter-date').value = todayStr;
             document.getElementById('form-date').value = todayStr;
         }
+
+        window.locateUser = () => {
+            window.showModal("Định vị", "<i class='fa-solid fa-spinner fa-spin text-emerald-400'></i> Đang lấy tọa độ GPS của bạn...", "info");
+            map.locate({setView: true, maxZoom: 16});
+            
+            map.once('locationfound', function(e) {
+                document.getElementById('custom-modal').classList.remove('active');
+                if(userLocationMarker) map.removeLayer(userLocationMarker);
+                
+                const userIcon = L.divIcon({
+                    className: 'custom-icon',
+                    html: `<div style="width: 20px; height: 20px; background-color: #3b82f6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #3b82f6; animation: pulse 1.5s infinite;"></div>`,
+                    iconSize: [20, 20], iconAnchor: [10, 10]
+                });
+                userLocationMarker = L.marker(e.latlng, {icon: userIcon}).addTo(map);
+                
+                if(currentMode === 'add') {
+                    window.placeTempMarker(e.latlng.lat, e.latlng.lng);
+                }
+            });
+            
+            map.once('locationerror', function(e) {
+                window.showModal("Lỗi Định Vị", "Không thể lấy vị trí. Hãy chắc chắn bạn đã <b>Bật GPS/Vị trí</b> trên điện thoại và trình duyệt.", "error");
+            });
+        };
 
         function createCustomIcon(status, hasImage) {
             let bgColor = '#3b82f6'; let iconClass = 'fa-store';
@@ -475,11 +494,17 @@
             listContainer.innerHTML = '';
             
             const filterDate = document.getElementById('filter-date').value;
-            const searchKeyword = document.getElementById('search-store-input').value.toLowerCase().trim();
+            // TÌM KIẾM THÔNG MINH KHÔNG DẤU
+            const rawKeyword = document.getElementById('search-store-input').value.trim();
+            const searchKeyword = removeVietnameseTones(rawKeyword);
             
             let displayData = storeData.filter(s => {
                 let matchDate = filterDate ? (s.date === filterDate) : true;
-                let matchSearch = searchKeyword ? (`${s.name} ${s.address} ${s.note || ''}`.toLowerCase().includes(searchKeyword)) : true;
+                let matchSearch = true;
+                if(searchKeyword) {
+                    const searchStr = removeVietnameseTones(`${s.name} ${s.address} ${s.note || ''}`);
+                    matchSearch = searchStr.includes(searchKeyword);
+                }
                 return matchDate && matchSearch;
             });
 
@@ -490,7 +515,6 @@
                 const hasImg = !!store.image;
                 const marker = L.marker([store.lat, store.lng], { icon: createCustomIcon(store.status, hasImg) }).addTo(markersLayer);
                 
-                // POPUP TRÊN BẢN ĐỒ
                 let imgHtml = hasImg ? `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-full h-24 object-cover border-b border-slate-700 cursor-pointer">` : '';
                 
                 const popupHtml = `
@@ -514,21 +538,14 @@
                 const listItem = document.createElement('div');
                 listItem.className = `p-2 rounded-lg bg-slate-900 border ${borderColor} flex gap-2.5 items-center shadow-sm`;
                 
-                // THUMBNAIL LIST
                 let listImgHtml = hasImg 
                     ? `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-14 h-14 object-cover rounded border border-slate-600 shrink-0 cursor-pointer">` 
                     : `<div class="w-14 h-14 rounded bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center text-slate-500" onclick="window.focusStore(${store.lat}, ${store.lng})"><i class="fa-solid fa-store text-xl"></i></div>`;
 
-                let displayStoreName = store.name;
-                if(searchKeyword && store.name.toLowerCase().includes(searchKeyword)) {
-                    const regex = new RegExp(`(${searchKeyword})`, 'gi');
-                    displayStoreName = store.name.replace(regex, '<span class="bg-amber-500 text-slate-900 px-0.5 rounded">$1</span>');
-                }
-
                 listItem.innerHTML = `
                     ${listImgHtml}
-                    <div class="flex-1 flex flex-col justify-center min-w-0" onclick="window.focusStore(${store.lat}, ${store.lng})">
-                        <div class="font-bold text-[13px] text-emerald-400 truncate">${displayStoreName}</div>
+                    <div class="flex-1 flex flex-col justify-center min-w-0 cursor-pointer" onclick="window.focusStore(${store.lat}, ${store.lng})">
+                        <div class="font-bold text-[13px] text-emerald-400 truncate">${store.name}</div>
                         <div class="text-[10px] text-slate-400 truncate mt-0.5">${store.address}</div>
                         <div class="flex justify-between items-center mt-1.5">
                             ${getStatusBadge(store.status)}
@@ -585,30 +602,60 @@
             document.getElementById('coords-display').className = "text-[11px] text-emerald-400 font-bold bg-slate-900 rounded py-1.5 border border-emerald-500/30 text-center shadow-inner";
         };
 
+        // TÌM KIẾM ĐỊA CHỈ TRÊN BẢN ĐỒ THÔNG MINH HƠN
         window.searchAddress = async (e) => {
-            e.preventDefault();
-            const query = document.getElementById('search-address-input').value;
-            if(!query) return window.showModal("Chú ý", "Gõ tên đường vào nhé Sếp.", "info");
-            
-            document.getElementById('form-address').value = query; // Auto điền tạm
+            if(e) e.preventDefault();
+            let query = document.getElementById('search-address-input').value.trim();
+            if(!query) return window.showModal("Chú ý", "Sếp vui lòng gõ tên đường, phường... vào ô tìm kiếm nhé.", "info");
             
             const btn = e.currentTarget;
+            const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
+            // Xử lý chuỗi thông minh: Tự thêm Hà Nội nếu thiếu
+            let fullQuery = query;
+            if (!fullQuery.toLowerCase().includes('hà nội') && !fullQuery.toLowerCase().includes('ha noi')) {
+                fullQuery += ', Hà Nội';
+            }
+
             try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Hà Nội')}`);
-                const data = await response.json();
+                // Ưu tiên tìm trong Việt Nam
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}&countrycodes=vn&accept-language=vi&limit=3`;
+                let response = await fetch(url);
+                let data = await response.json();
+                
+                // Thuật toán Fallback: Nếu không ra, vứt bớt từ khóa gây nhiễu
+                if (data.length === 0) {
+                    let fallbackQuery = query.replace(/(số|ngõ|hẻm|ngách|tòa nhà)\s*\d+/gi, '').trim();
+                    if(fallbackQuery && fallbackQuery !== query) {
+                        if (!fallbackQuery.toLowerCase().includes('hà nội') && !fallbackQuery.toLowerCase().includes('ha noi')) {
+                            fallbackQuery += ', Hà Nội';
+                        }
+                        const res2 = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}&countrycodes=vn&accept-language=vi&limit=3`);
+                        data = await res2.json();
+                    }
+                }
+
                 if(data && data.length > 0) {
                     map.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 16);
                     window.placeTempMarker(parseFloat(data[0].lat), parseFloat(data[0].lon));
                     document.getElementById('form-address').value = data[0].display_name.split(',').slice(0, 3).join(',');
+                } else {
+                    window.showModal("Không tìm thấy", "Bản đồ miễn phí cần gõ rõ Phường, Quận (VD: Nguyễn Trãi, Thanh Xuân). Hoặc Sếp hãy bấm biểu tượng GPS để tự bắt tọa độ nhé.", "warning");
                 }
-            } catch (err) {} finally { btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> TÌM'; }
+            } catch (err) {
+                window.showModal("Lỗi", "Lỗi kết nối khi tìm kiếm bản đồ.", "error");
+            } finally { 
+                btn.innerHTML = originalText; 
+            }
         };
 
         window.clearForm = () => {
             document.getElementById('add-store-form').reset();
             document.getElementById('form-id').value = '';
             document.getElementById('form-date').value = todayStr;
+            document.getElementById('search-address-input').value = ''; 
+            
             window.removeImage();
             document.getElementById('btn-submit-form').innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud';
             document.getElementById('coords-display').innerHTML = '<i class="fa-solid fa-hand-pointer mr-1 animate-bounce"></i> Chạm lên bản đồ để ghim vị trí';
@@ -623,7 +670,6 @@
             const tListBtn = document.getElementById('tab-list-btn'), tAddBtn = document.getElementById('tab-add-btn');
             const tList = document.getElementById('tab-list'), tAdd = document.getElementById('tab-add');
             
-            // Xóa active class
             tListBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-white rounded text-xs transition";
             tAddBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-white rounded text-xs transition";
             
@@ -666,7 +712,7 @@
                 return; 
             }
             let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để tính toán tuyến.", "warning");
+            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để tính toán.", "warning");
 
             let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
             route.push(current);
@@ -682,6 +728,7 @@
             routeLine = L.polyline(route.map(s => [s.lat, s.lng]), { color: '#d946ef', weight: 4, opacity: 0.9, lineJoin: 'round' }).addTo(map);
             let dashOffset = 0; setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+            window.showModal("AI Suggest", `Lộ trình cho ${route.length} khách cũ.`, "success");
             
             document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-eraser"></i> Xóa Gợi Ý';
             document.getElementById('btn-draw-suggest').className = "flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
