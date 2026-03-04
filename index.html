@@ -7,6 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- THÊM THƯ VIỆN LỊCH FLATPICKR VÀO ĐÂY -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
+
     <style>
         html, body { 
             height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; 
@@ -106,13 +113,26 @@
 
                 <div id="tab-list" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-2 shrink-0 border-b border-slate-700 bg-slate-800/50">
-                        <div class="flex gap-2 mb-2">
-                            <div class="relative flex-1">
-                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
-                                <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm tên, SĐT, địa chỉ..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                        
+                        <!-- LỌC KHOẢNG NGÀY NÂNG CẤP (FLATPICKR) -->
+                        <div class="bg-slate-900/50 p-1.5 rounded border border-slate-700 mb-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[9px] text-slate-400 uppercase font-semibold">Lọc theo khoảng ngày:</span>
                             </div>
-                            <input type="date" id="filter-date" onchange="window.renderAll()" class="w-[105px] bg-slate-900 border border-slate-600 text-white rounded px-1.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                            <div class="flex gap-1 items-center">
+                                <input type="text" id="filter-date-range" placeholder="Bấm để chọn lịch..." class="flex-1 bg-slate-800 border border-slate-600 text-white rounded px-2 py-1.5 text-[10px] focus:outline-none focus:border-emerald-500 cursor-pointer text-center font-bold" readonly>
+                                <button onclick="window.applyFilter()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-[10px] font-bold transition shadow whitespace-nowrap"><i class="fa-solid fa-filter"></i> Lọc</button>
+                                <button onclick="window.clearFilter()" class="bg-slate-700 hover:bg-slate-600 text-red-400 px-2.5 py-1.5 rounded text-[10px] transition whitespace-nowrap tooltip" title="Xóa lọc"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
                         </div>
+
+                        <!-- Search -->
+                        <div class="relative mb-2 w-full">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                            <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm tên, SĐT, địa chỉ..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <!-- Các nút vẽ tuyến -->
                         <div class="flex gap-2">
                             <button id="btn-draw-history" onclick="window.drawHistoryRoute()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600">
                                 <i class="fa-solid fa-route"></i> Vẽ Tuyến
@@ -352,7 +372,6 @@
                 img.src = e.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    // TĂNG ĐỘ NÉT CỦA ẢNH (Từ 600px lên 1200px)
                     const MAX_WIDTH = 1200; 
                     let width = img.width;
                     let height = img.height;
@@ -367,7 +386,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // TĂNG CHẤT LƯỢNG NÉN TỪ 60% lên 85%
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
                     document.getElementById('form-image-base64').value = compressedBase64;
                     document.getElementById('image-preview').src = compressedBase64;
@@ -401,7 +419,7 @@
             const storeObj = {
                 name: document.getElementById('form-name').value.trim(),
                 address: document.getElementById('form-address').value.trim(),
-                phone: phoneVal, // LƯU SỐ ĐIỆN THOẠI
+                phone: phoneVal, 
                 date: document.getElementById('form-date').value,
                 status: document.getElementById('form-status').value,
                 note: document.getElementById('form-note').value.trim(),
@@ -418,7 +436,7 @@
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores', docId), storeObj);
                 if(tempMarker) map.removeLayer(tempMarker);
                 window.clearForm();
-                document.getElementById('filter-date').value = storeObj.date;
+                // Bỏ lọc ngày sau khi lưu để có thể nhìn thấy điểm vừa thêm trong toàn bộ danh sách
                 window.switchTab('list');
             } catch (err) { window.showModal("Lỗi", "Tải lên thất bại.", "error"); } 
             finally { btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud'; btn.disabled = false; }
@@ -444,8 +462,27 @@
                 if(currentMode !== 'add') window.switchTab('add');
                 window.placeTempMarker(e.latlng.lat, e.latlng.lng);
             });
-            document.getElementById('filter-date').value = todayStr;
+            // Loại bỏ dòng gán ngày mặc định cho bộ lọc để mặc định hiển thị TẤT CẢ
             document.getElementById('form-date').value = todayStr;
+
+            // KHỞI TẠO BỘ LỊCH BẬT LÊN
+            flatpickr("#filter-date-range", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                locale: "vn",
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        const diffTime = Math.abs(selectedDates[1] - selectedDates[0]);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                        if (diffDays > 31) {
+                            window.showModal("Giới hạn", "Vui lòng chọn khoảng thời gian tối đa 31 ngày để bảo đảm tốc độ tải.", "warning");
+                            instance.clear();
+                        }
+                    }
+                }
+            });
         }
 
         window.locateUser = () => {
@@ -495,18 +532,50 @@
             return '<span class="badge tu-choi">Từ chối</span>';
         }
 
+        // HÀM LẤY NGÀY LỌC TỪ LỊCH (Đã fix triệt để lỗi ngôn ngữ)
+        function getFilterDates() {
+            const fp = document.getElementById('filter-date-range')._flatpickr;
+            // Nếu chưa chọn ngày nào
+            if (!fp || !fp.selectedDates || fp.selectedDates.length === 0) {
+                return { start: null, end: null };
+            }
+            
+            // Lấy thẳng đối tượng Date từ bộ lịch
+            const startObj = fp.selectedDates[0];
+            const endObj = fp.selectedDates.length > 1 ? fp.selectedDates[1] : fp.selectedDates[0];
+            
+            // Ép format về chuẩn YYYY-MM-DD để so sánh với Database
+            const formatYMD = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+            
+            return { start: formatYMD(startObj), end: formatYMD(endObj) };
+        }
+
+        // NÚT BẤM LỌC
+        window.applyFilter = () => {
+            window.renderAll();
+        };
+
         window.renderAll = () => {
             if(!markersLayer) return;
             markersLayer.clearLayers();
             const listContainer = document.getElementById('store-list');
             listContainer.innerHTML = '';
             
-            const filterDate = document.getElementById('filter-date').value;
+            const { start: startDate, end: endDate } = getFilterDates();
             const rawKeyword = document.getElementById('search-store-input').value.trim();
             const searchKeyword = removeVietnameseTones(rawKeyword);
             
             let displayData = storeData.filter(s => {
-                let matchDate = filterDate ? (s.date === filterDate) : true;
+                let matchDate = true;
+                if (startDate && endDate) {
+                    matchDate = s.date >= startDate && s.date <= endDate;
+                }
+
                 let matchSearch = true;
                 if(searchKeyword) {
                     const searchStr = removeVietnameseTones(`${s.name} ${s.address} ${s.phone || ''} ${s.note || ''}`);
@@ -524,7 +593,6 @@
                 
                 let imgHtml = hasImg ? `<img src="${store.image}" onclick="window.openLightbox('${store.image}', '${store.name}')" class="w-full h-24 object-cover border-b border-slate-700 cursor-pointer">` : '';
                 
-                // POPUP TRÊN BẢN ĐỒ (Có SĐT và nút Gọi/Zalo)
                 const popupHtml = `
                     <div class="w-48">
                         ${imgHtml}
@@ -565,7 +633,6 @@
                     displayStoreName = store.name.replace(regex, '<span class="bg-amber-500 text-slate-900 px-0.5 rounded">$1</span>');
                 }
 
-                // DANH SÁCH BÊN TRÁI (Có SĐT và nút Gọi/Zalo)
                 listItem.innerHTML = `
                     ${listImgHtml}
                     <div class="flex-1 flex flex-col justify-center min-w-0" onclick="window.focusStore(${store.lat}, ${store.lng})">
@@ -607,7 +674,7 @@
             document.getElementById('form-id').value = store.id;
             document.getElementById('form-name').value = store.name;
             document.getElementById('form-address').value = store.address;
-            document.getElementById('form-phone').value = store.phone || ''; // Nạp lại sđt
+            document.getElementById('form-phone').value = store.phone || ''; 
             document.getElementById('form-date').value = store.date || todayStr;
             document.getElementById('form-status').value = store.status;
             document.getElementById('form-note').value = store.note || '';
@@ -694,7 +761,12 @@
             if(tempMarker) map.removeLayer(tempMarker);
         };
 
-        window.clearFilter = () => { document.getElementById('filter-date').value = ''; document.getElementById('search-store-input').value = ''; window.renderAll(); };
+        window.clearFilter = () => { 
+            const fp = document.getElementById('filter-date-range')._flatpickr;
+            if(fp) fp.clear();
+            document.getElementById('search-store-input').value = ''; 
+            window.renderAll(); 
+        };
 
         window.switchTab = (tab) => {
             currentMode = tab;
@@ -722,10 +794,17 @@
                 document.getElementById('btn-draw-history').className = "flex-1 bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600";
                 return; 
             }
-            let dataToDraw = document.getElementById('filter-date').value ? storeData.filter(s => s.date === document.getElementById('filter-date').value) : storeData;
+            
+            const { start: startDate, end: endDate } = getFilterDates();
+            
+            let dataToDraw = storeData;
+            if (startDate && endDate) {
+                dataToDraw = storeData.filter(s => s.date >= startDate && s.date <= endDate);
+            }
+            
             dataToDraw = dataToDraw.filter(s => s.status === 'ghetham' || s.status === 'chot');
             
-            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Ghé Thăm/Lên Đơn trong ngày để nối thành đường.", "warning");
+            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Ghé Thăm/Lên Đơn trong danh sách hiện tại để nối thành đường.", "warning");
             
             dataToDraw.sort((a,b) => a.id - b.id);
             routeLine = L.polyline(dataToDraw.map(s => [s.lat, s.lng]), { color: '#f59e0b', weight: 4, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(map);
