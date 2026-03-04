@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- THÊM THƯ VIỆN LỊCH FLATPICKR VÀO ĐÂY -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         html, body { 
@@ -45,14 +46,17 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
         #loading-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
         #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100000; justify-content: center; align-items: center; flex-direction: column; padding: 10px;}
         #lightbox.active { display: flex; }
         #lightbox img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
         #lightbox-close { position: absolute; top: 15px; right: 15px; color: white; font-size: 24px; cursor: pointer; background: rgba(255,255,255,0.2); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        #custom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; padding: 16px;}
-        #custom-modal.active { display: flex; }
+        
+        .modal-base { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999999; justify-content: center; align-items: center; padding: 16px;}
+        .modal-base.active { display: flex; }
     </style>
 </head>
 <body>
@@ -63,10 +67,76 @@
         <p class="text-slate-400 text-xs text-center" id="loading-text">Khởi tạo kết nối an toàn</p>
     </div>
 
-    <div id="lightbox" onclick="closeLightbox()">
-        <div id="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></div>
+    <div id="lightbox" onclick="window.closeLightbox()">
+        <div id="lightbox-close" onclick="window.closeLightbox()"><i class="fa-solid fa-xmark"></i></div>
         <img id="lightbox-img" src="" alt="Ảnh Cửa Hàng">
         <p id="lightbox-caption" class="text-emerald-400 mt-4 font-bold text-sm md:text-lg text-center px-4"></p>
+    </div>
+
+    <!-- MODAL CÀI ĐẶT LINK GOOGLE SHEET (NÂNG CẤP) -->
+    <div id="sheet-modal" class="modal-base transition-all">
+        <div class="bg-slate-800 w-full max-w-md rounded-xl flex flex-col border border-slate-600 shadow-2xl p-5 relative">
+            <button onclick="document.getElementById('sheet-modal').classList.remove('active')" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 class="text-emerald-400 font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-file-excel"></i>Cài đặt Kết nối Sheet</h3>
+            
+            <div class="mb-4">
+                <label class="block text-xs text-slate-300 font-bold mb-1">1. Link để Sếp mở xem trực tiếp:</label>
+                <input type="text" id="sheet-url-input" class="w-full bg-slate-900 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" placeholder="https://docs.google.com/spreadsheets/d/...">
+            </div>
+
+            <div class="mb-5 bg-indigo-900/20 p-3 rounded border border-indigo-500/30">
+                <label class="block text-xs text-indigo-300 font-bold mb-1"><i class="fa-solid fa-robot mr-1"></i>2. Link dữ liệu (.CSV) cho AI đọc:</label>
+                <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">Để có link này: Mở Google Sheet > Tệp (File) > Chia sẻ (Share) > Công bố lên web (Publish to web) > Chọn trang tính (VD: KPI T2) > Chọn định dạng CSV > Copy link dán vào đây.</p>
+                <input type="text" id="sheet-csv-input" class="w-full bg-slate-900 border border-slate-600 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" placeholder="Chứa chữ: pub?output=csv">
+            </div>
+
+            <div class="flex gap-2 justify-end">
+                <button onclick="document.getElementById('sheet-modal').classList.remove('active')" class="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition">Hủy</button>
+                <button onclick="window.saveAndOpenSheet()" class="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow">Lưu Cài Đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI CHAT MODAL -->
+    <div id="ai-modal" class="hidden fixed inset-0 bg-black/80 z-[100000] flex justify-center items-end md:items-center p-0 md:p-4 transition-all">
+        <div class="bg-slate-800 w-full md:w-[800px] h-[90vh] md:h-[650px] rounded-t-2xl md:rounded-2xl flex border border-slate-600 shadow-2xl overflow-hidden relative">
+            
+            <div id="ai-sidebar" class="w-64 bg-slate-900 border-r border-slate-700 flex flex-col absolute md:relative h-full z-[100] transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+                <div class="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-900">
+                    <span class="font-bold text-slate-300 text-sm uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Lịch Sử Chat</span>
+                    <button onclick="window.toggleAISidebar()" class="md:hidden text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <div class="p-3 bg-slate-800/50">
+                    <button onclick="window.startNewAIChat()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition shadow text-sm font-bold"><i class="fa-solid fa-plus"></i> ĐOẠN CHAT MỚI</button>
+                </div>
+                <div id="ai-history-list" class="flex-1 overflow-y-auto p-2 flex flex-col gap-1 scrollable-area"></div>
+            </div>
+
+            <div id="ai-sidebar-overlay" class="hidden absolute inset-0 bg-black/60 z-[90] md:hidden" onclick="window.toggleAISidebar()"></div>
+
+            <div class="flex-1 flex flex-col h-full bg-slate-800 relative w-full min-w-0">
+                <div class="flex justify-between items-center bg-slate-900 p-3.5 border-b border-slate-700 shadow-sm shrink-0">
+                    <div class="flex items-center gap-3">
+                        <button onclick="window.toggleAISidebar()" class="md:hidden text-slate-400 hover:text-white p-1"><i class="fa-solid fa-bars text-lg"></i></button>
+                        <h3 class="text-emerald-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wide"><i class="fa-solid fa-robot"></i> Trợ Lý Phân Tích Dữ Liệu</h3>
+                    </div>
+                    <button onclick="window.closeAI()" class="text-slate-400 hover:text-white bg-slate-800 rounded-full w-8 h-8 flex items-center justify-center transition shadow-inner border border-slate-700"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div id="ai-chatbox" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 scrollable-area bg-[#0f172a]/50"></div>
+                
+                <div class="p-2.5 flex gap-2 overflow-x-auto shrink-0 scrollbar-hide border-t border-slate-700 bg-slate-800/80">
+                    <button onclick="window.sendQuickPrompt('Cập nhật doanh số hiện tại và tiến độ KPI tháng này từ Google Sheet.')" class="whitespace-nowrap bg-green-600/20 hover:bg-green-600/40 text-green-400 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-green-500/30 transition"><i class="fa-solid fa-file-invoice-dollar mr-1"></i> Báo cáo Doanh Số (Sheet)</button>
+                    <button onclick="window.sendQuickPrompt('Vẽ biểu đồ phát triển số lượng khách chốt đơn trên bản đồ.')" class="whitespace-nowrap bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-indigo-500/30 transition">📊 Biểu đồ Bản đồ</button>
+                    <button onclick="window.sendQuickPrompt('Ai cần chăm sóc lại ngay trên bản đồ? Lọc ra các khách Đang chăm sóc.')" class="whitespace-nowrap bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-amber-500/30 transition">🎯 Khách cần gọi lại</button>
+                </div>
+                
+                <div class="p-3 bg-slate-900 flex gap-2 items-center shrink-0">
+                    <input type="text" id="ai-input" placeholder="Hỏi AI bất kỳ điều gì..." class="flex-1 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-emerald-500 border border-slate-700 transition shadow-inner" onkeypress="if(event.key === 'Enter') window.sendAIQuery()">
+                    <button onclick="window.sendAIQuery()" class="bg-emerald-600 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-emerald-500 transition shadow-md"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="app-wrapper">
@@ -82,8 +152,15 @@
                     </p>
                 </div>
             </div>
-            <div class="text-xs text-slate-300 bg-slate-900 px-2.5 py-1.5 rounded border border-slate-700 shadow-inner">
-                <i class="fa-regular fa-circle-user mr-1"></i> <span class="hidden md:inline">Online</span>
+            
+            <!-- NÚT GOOGLE SHEET ĐÃ NÂNG CẤP CÓ CÀI ĐẶT -->
+            <div class="flex items-center">
+                <button onclick="window.openGoogleSheet()" class="text-[10px] md:text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/40 px-2.5 py-1.5 rounded-l border border-emerald-500/30 transition shadow flex items-center gap-1.5 font-bold">
+                    <i class="fa-solid fa-file-excel"></i> <span class="hidden md:inline">Báo Cáo Sheet</span>
+                </button>
+                <button onclick="window.openSheetSettings()" class="text-[10px] md:text-xs bg-slate-700 text-slate-300 hover:bg-white px-2.5 py-1.5 rounded-r border-y border-r border-slate-600 transition shadow tooltip" title="Cài đặt Link Sheet">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
             </div>
         </header>
 
@@ -92,7 +169,6 @@
             <div class="w-full flex-[0_0_42%] md:flex-1 relative rounded-lg overflow-hidden border border-slate-700 shadow-md shrink-0">
                 <div id="map" class="absolute inset-0"></div>
                 
-                <!-- NÚT GPS -->
                 <button onclick="window.locateUser()" class="absolute bottom-14 right-2 bg-slate-800/90 text-emerald-400 border border-slate-600 w-10 h-10 rounded-lg shadow-lg z-[400] flex justify-center items-center backdrop-blur hover:bg-slate-700 transition">
                     <i class="fa-solid fa-crosshairs text-lg"></i>
                 </button>
@@ -114,7 +190,6 @@
                 <div id="tab-list" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-2 shrink-0 border-b border-slate-700 bg-slate-800/50">
                         
-                        <!-- LỌC KHOẢNG NGÀY NÂNG CẤP (FLATPICKR) -->
                         <div class="bg-slate-900/50 p-1.5 rounded border border-slate-700 mb-2">
                             <div class="flex justify-between items-center mb-1">
                                 <span class="text-[9px] text-slate-400 uppercase font-semibold">Lọc theo khoảng ngày:</span>
@@ -126,29 +201,28 @@
                             </div>
                         </div>
 
-                        <!-- Search -->
                         <div class="relative mb-2 w-full">
                             <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-[10px]"></i>
                             <input type="text" id="search-store-input" onkeyup="window.renderAll()" placeholder="Tìm tên, SĐT, địa chỉ..." class="w-full bg-slate-900 border border-slate-600 text-white rounded pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
                         </div>
 
-                        <!-- Các nút vẽ tuyến -->
-                        <div class="flex gap-2">
-                            <button id="btn-draw-history" onclick="window.drawHistoryRoute()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600">
-                                <i class="fa-solid fa-route"></i> Vẽ Tuyến
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-draw-history" onclick="window.drawHistoryRoute()" class="bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600 shadow">
+                                <i class="fa-solid fa-route"></i> Nối Tuyến Đã Đi
                             </button>
-                            <button id="btn-draw-suggest" onclick="window.suggestRoute()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Gợi Ý
+                            <button id="btn-draw-suggest" onclick="window.suggestRoute()" class="bg-slate-700 hover:bg-slate-600 text-fuchsia-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600 shadow">
+                                <i class="fa-solid fa-map-pin"></i> Tối Ưu Lộ Trình
+                            </button>
+                            <button onclick="window.openAI()" class="col-span-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:opacity-90 text-white py-2 rounded font-bold text-[11px] transition shadow flex justify-center items-center gap-2 border border-emerald-500/50">
+                                <i class="fa-solid fa-sparkles animate-pulse"></i> Gọi Trợ Lý AI Phân Tích
                             </button>
                         </div>
                     </div>
                     
-                    <div class="px-2 py-1 flex justify-between items-center bg-slate-900/50 shrink-0">
-                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Kết quả: <span id="list-count" class="text-emerald-400 font-bold text-xs">0</span></span>
+                    <div class="px-2 py-1 flex justify-between items-center bg-slate-900/50 shrink-0 border-b border-slate-700">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Kết quả: <span id="list-count" class="text-emerald-400 font-bold text-xs">0</span> điểm</span>
                     </div>
-                    <div id="store-list" class="flex-1 scrollable-area flex flex-col gap-2 p-2 pb-4">
-                        <!-- Danh sách cửa hàng -->
-                    </div>
+                    <div id="store-list" class="flex-1 scrollable-area flex flex-col gap-2 p-2 pb-4"></div>
                 </div>
 
                 <div id="tab-add" class="hidden flex-1 scrollable-area p-3 bg-slate-800">
@@ -194,7 +268,6 @@
                                 <label class="block text-[10px] font-semibold text-slate-400 mb-1">Địa Chỉ Thực Tế <span class="text-red-500">*</span></label>
                                 <input type="text" id="form-address" required class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="VD: 15 Nguyễn Trãi, Thanh Xuân">
                             </div>
-                            <!-- TRƯỜNG NHẬP SỐ ĐIỆN THOẠI MỚI -->
                             <div class="col-span-2">
                                 <label class="block text-[10px] font-semibold text-slate-400 mb-1">Số Điện Thoại <span class="text-slate-500 font-normal">(Để Gọi/Nhắn Zalo 1 chạm)</span></label>
                                 <input type="tel" id="form-phone" class="w-full bg-slate-900 border border-slate-600 text-white rounded px-2.5 py-2 text-xs focus:outline-none focus:border-emerald-500 shadow-inner" placeholder="VD: 0987654321">
@@ -232,8 +305,9 @@
         </div>
     </div>
 
-    <div id="custom-modal">
-        <div class="bg-slate-800 border border-slate-600 p-5 rounded-lg w-11/12 max-w-[320px] text-center shadow-2xl">
+    <!-- Modal Box Nền Tảng -->
+    <div id="custom-modal" class="modal-base transition-all">
+        <div class="bg-slate-800 border border-slate-600 p-5 rounded-lg w-11/12 max-w-[320px] text-center shadow-2xl relative">
             <i id="modal-icon" class="fa-solid fa-circle-info text-3xl text-blue-400 mb-3"></i>
             <h3 id="modal-title" class="text-sm font-bold text-white mb-2 uppercase">Thông báo</h3>
             <p id="modal-msg" class="text-xs text-slate-300 mb-5 leading-relaxed">Nội dung.</p>
@@ -304,7 +378,7 @@
             if (confirmCallback) {
                 actions.innerHTML = `
                     <button id="modal-cancel" class="bg-slate-600 px-4 py-2 rounded text-white font-bold text-xs flex-1 border border-slate-500">Hủy</button>
-                    <button id="modal-confirm" class="bg-red-600 px-4 py-2 rounded text-white font-bold text-xs flex-1 shadow">Xác Nhận Xóa</button>
+                    <button id="modal-confirm" class="bg-red-600 px-4 py-2 rounded text-white font-bold text-xs flex-1 shadow">Xác Nhận</button>
                 `;
                 document.getElementById('modal-cancel').onclick = () => document.getElementById('custom-modal').classList.remove('active');
                 document.getElementById('modal-confirm').onclick = () => { confirmCallback(); document.getElementById('custom-modal').classList.remove('active'); };
@@ -324,6 +398,35 @@
 
         window.closeLightbox = () => {
             document.getElementById('lightbox').classList.remove('active');
+        };
+
+        // --- GOOGLE SHEET TÍCH HỢP ---
+        window.openSheetSettings = () => {
+            const url = localStorage.getItem('fasttel_google_sheet_url') || '';
+            const csvUrl = localStorage.getItem('fasttel_google_sheet_csv') || '';
+            document.getElementById('sheet-url-input').value = url;
+            document.getElementById('sheet-csv-input').value = csvUrl;
+            document.getElementById('sheet-modal').classList.add('active');
+        };
+
+        window.saveAndOpenSheet = () => {
+            const url = document.getElementById('sheet-url-input').value.trim();
+            const csvUrl = document.getElementById('sheet-csv-input').value.trim();
+            
+            localStorage.setItem('fasttel_google_sheet_url', url);
+            localStorage.setItem('fasttel_google_sheet_csv', csvUrl);
+            
+            document.getElementById('sheet-modal').classList.remove('active');
+            window.showModal("Lưu Thành Công", "Đã cập nhật liên kết Google Sheet. AI giờ đã có thể đọc dữ liệu KPI của Sếp!", "success");
+        };
+
+        window.openGoogleSheet = () => {
+            let sheetUrl = localStorage.getItem('fasttel_google_sheet_url');
+            if (sheetUrl) {
+                window.open(sheetUrl, '_blank');
+            } else {
+                window.openSheetSettings();
+            }
         };
 
         async function bootSystem() {
@@ -358,6 +461,289 @@
             });
         }
 
+        // ==========================================
+        // KHỐI AI GEMINI CHAT
+        // ==========================================
+        let aiSessions = JSON.parse(localStorage.getItem('fasttel_ai_sessions')) || [];
+        let currentSessionId = null;
+
+        window.openAI = () => {
+            document.getElementById('ai-modal').classList.remove('hidden');
+            if(aiSessions.length === 0) {
+                window.startNewAIChat();
+            } else {
+                if(!currentSessionId) currentSessionId = aiSessions[0].id;
+                renderAIHistory();
+                renderAIChat();
+            }
+        };
+        
+        window.closeAI = () => document.getElementById('ai-modal').classList.add('hidden');
+
+        window.toggleAISidebar = () => {
+            const sidebar = document.getElementById('ai-sidebar');
+            const overlay = document.getElementById('ai-sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        };
+
+        function saveAISessions() {
+            localStorage.setItem('fasttel_ai_sessions', JSON.stringify(aiSessions));
+            renderAIHistory();
+        }
+
+        window.startNewAIChat = () => {
+            currentSessionId = Date.now().toString();
+            aiSessions.unshift({
+                id: currentSessionId,
+                title: 'Đoạn chat mới',
+                messages: [{ role: 'model', text: 'Chào Sếp! Em là Trợ lý AI của Fasttel.\n\nSếp muốn em báo cáo tỷ lệ chốt đơn, đề xuất lộ trình đi, hay lọc danh sách khách cần gọi điện ngay ạ?' }]
+            });
+            saveAISessions();
+            renderAIChat();
+            
+            if(window.innerWidth < 768) {
+                document.getElementById('ai-sidebar').classList.add('-translate-x-full');
+                document.getElementById('ai-sidebar-overlay').classList.add('hidden');
+            }
+        };
+
+        function renderAIHistory() {
+            const list = document.getElementById('ai-history-list');
+            list.innerHTML = '';
+            aiSessions.forEach(session => {
+                const isActive = session.id === currentSessionId;
+                const div = document.createElement('div');
+                div.className = `p-2.5 rounded-lg text-sm flex justify-between items-center cursor-pointer transition ${isActive ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 font-semibold' : 'text-slate-300 hover:bg-slate-800'}`;
+                
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden flex-1" onclick="window.switchAISession('${session.id}')">
+                        <i class="fa-regular fa-message shrink-0 text-xs"></i>
+                        <span class="truncate whitespace-nowrap">${session.title}</span>
+                    </div>
+                    <button onclick="window.deleteAISession(event, '${session.id}')" class="text-slate-500 hover:text-red-400 p-1 shrink-0 transition"><i class="fa-solid fa-trash text-xs"></i></button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.switchAISession = (id) => {
+            currentSessionId = id;
+            renderAIHistory();
+            renderAIChat();
+            if(window.innerWidth < 768) {
+                document.getElementById('ai-sidebar').classList.add('-translate-x-full');
+                document.getElementById('ai-sidebar-overlay').classList.add('hidden');
+            }
+        };
+
+        window.deleteAISession = (e, id) => {
+            e.stopPropagation();
+            window.showModal("Xóa đoạn chat", "Sếp có chắc chắn muốn xóa đoạn chat này khỏi lịch sử AI không?", "warning", () => {
+                aiSessions = aiSessions.filter(s => s.id !== id);
+                if(currentSessionId === id) {
+                    if(aiSessions.length > 0) {
+                        currentSessionId = aiSessions[0].id;
+                    } else {
+                        window.startNewAIChat(); return;
+                    }
+                }
+                saveAISessions();
+                renderAIChat();
+            });
+        };
+
+        function renderAIChat() {
+            const chatbox = document.getElementById('ai-chatbox');
+            chatbox.innerHTML = '';
+            const session = aiSessions.find(s => s.id === currentSessionId);
+            if(!session) return;
+            
+            session.messages.forEach(msg => {
+                appendChatDOM(msg.text, msg.role === 'user');
+            });
+        }
+
+        function appendChatDOM(msg, isUser) {
+            const chatbox = document.getElementById('ai-chatbox');
+            const div = document.createElement('div');
+            
+            if (isUser) {
+                div.className = "bg-emerald-600 text-white p-3 rounded-xl rounded-tr-none self-end max-w-[90%] text-sm shadow-md";
+                div.innerText = msg;
+            } else {
+                div.className = "bg-slate-700 border border-slate-600 text-white p-3.5 rounded-xl rounded-tl-none self-start max-w-[95%] md:max-w-[90%] text-sm shadow-md leading-relaxed";
+                let html = msg.replace(/\*\*(.*?)\*\*/g, '<strong class="text-emerald-400">$1</strong>');
+                html = html.replace(/\*(.*?)\*/g, '<em class="text-amber-200">$1</em>');
+                html = html.replace(/\n/g, '<br>');
+                div.innerHTML = html;
+            }
+            chatbox.appendChild(div);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        window.sendQuickPrompt = (promptText) => {
+            document.getElementById('ai-input').value = promptText;
+            window.sendAIQuery();
+        }
+
+        window.sendAIQuery = async () => {
+            const input = document.getElementById('ai-input');
+            const query = input.value.trim();
+            if(!query) return;
+
+            const session = aiSessions.find(s => s.id === currentSessionId);
+            if(!session) return;
+
+            input.value = '';
+            
+            if(session.messages.length === 1 && session.title === 'Đoạn chat mới') {
+                session.title = query.length > 25 ? query.substring(0, 25) + '...' : query;
+            }
+            
+            session.messages.push({ role: 'user', text: query });
+            saveAISessions();
+            appendChatDOM(query, true);
+
+            const isChartRequest = query.toLowerCase().includes('biểu đồ');
+
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = "bg-slate-700 border border-slate-600 text-slate-300 p-3 rounded-xl rounded-tl-none self-start max-w-[90%] text-sm flex gap-2 items-center shadow-md mt-2";
+            loadingDiv.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-emerald-400"></i> Đang phân tích dữ liệu Bản đồ & Google Sheet...';
+            document.getElementById('ai-chatbox').appendChild(loadingDiv);
+            document.getElementById('ai-chatbox').scrollTop = document.getElementById('ai-chatbox').scrollHeight;
+
+            // 1. LẤY DỮ LIỆU TỪ BẢN ĐỒ
+            const cleanData = storeData.map(s => ({
+                Ten: s.name,
+                Trang_Thai: s.status === 'chot' ? 'Đã Lên Đơn' : (s.status === 'ghetham' ? 'Đang Chăm Sóc' : (s.status === 'moi' ? 'Data Mới' : 'Từ chối')),
+                Ngay: s.date,
+                SDT: s.phone || 'Trống',
+                Ghi_chu: s.note || 'Trống'
+            }));
+
+            // 2. LẤY DỮ LIỆU TỪ GOOGLE SHEET (NẾU CÓ LINK CSV)
+            let sheetContext = "Người dùng chưa cung cấp link dữ liệu Google Sheet CSV, hoặc link bị lỗi.";
+            const csvUrl = localStorage.getItem('fasttel_google_sheet_csv');
+            if (csvUrl) {
+                try {
+                    const response = await fetch(csvUrl);
+                    if (response.ok) {
+                        const csvText = await response.text();
+                        sheetContext = `DỮ LIỆU TỪ BẢNG GOOGLE SHEET (KPI/DOANH SỐ):\n${csvText}`;
+                    } else {
+                        sheetContext = "Đã có link Google Sheet CSV nhưng không thể truy cập (Có thể do chưa Publish to web).";
+                    }
+                } catch (e) {
+                    sheetContext = "Lỗi mạng khi cố gắng đọc dữ liệu từ Google Sheet.";
+                }
+            }
+
+            let contextStr = session.messages.map(m => `${m.role === 'user' ? 'Sếp' : 'Trợ lý'}: ${m.text}`).join('\n');
+            
+            let promptText = `Bối cảnh cuộc trò chuyện:\n${contextStr}\n\n`;
+            promptText += `[NGUỒN 1] DỮ LIỆU TỪ BẢN ĐỒ (Hôm nay: ${todayStr}):\n${JSON.stringify(cleanData, null, 2)}\n\n`;
+            promptText += `[NGUỒN 2] ${sheetContext}\n\n`;
+            
+            promptText += "[LƯU Ý DÀNH CHO AI]: Bạn hiện tại đã CÓ THỂ ĐỌC ĐƯỢC cả dữ liệu từ Bản đồ và dữ liệu từ Bảng tính Google Sheet (KPI, doanh số) do người dùng cung cấp ở phần [NGUỒN 2]. Nếu người dùng hỏi về doanh số, số lượng khách hàng mục tiêu, tiến độ KPI, hãy ưu tiên đọc và trích xuất dữ liệu từ [NGUỒN 2]. Trả lời ngắn gọn, rõ ràng, báo cáo số liệu chính xác.";
+
+            if (isChartRequest) {
+                promptText += "\n\n(Hệ thống UI đã tự động vẽ biểu đồ đường cho dữ liệu Bản đồ, bạn hãy giải thích và nhận xét về xu hướng bán hàng một cách tự nhiên. Bắt đầu bằng câu: Dạ em gửi Sếp biểu đồ ạ...)";
+            }
+
+            try {
+                const apiKey = ""; 
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: promptText }] }],
+                    systemInstruction: { parts: [{ text: "Bạn là Trợ lý AI xuất sắc chuyên phân tích dữ liệu kinh doanh và định hướng cho Sales của Fasttel. Hãy xưng hô là 'em' và gọi người dùng là 'Sếp'. Hãy phân tích danh sách khách hàng được cung cấp. Đưa ra câu trả lời ngắn gọn, chuyên nghiệp." }] }
+                };
+
+                let delay = 1000;
+                let resultText = "Lỗi phản hồi từ AI.";
+                
+                for (let i = 0; i < 5; i++) {
+                    try {
+                        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const data = await res.json();
+                        resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không có phản hồi.";
+                        break;
+                    } catch (e) {
+                        if (i === 4) throw e;
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                    }
+                }
+
+                document.getElementById(loadingId).remove();
+                
+                if (isChartRequest) drawChartInChat();
+
+                session.messages.push({ role: 'model', text: resultText });
+                saveAISessions();
+                appendChatDOM(resultText, false);
+
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                appendChatDOM("❌ Lỗi kết nối máy chủ AI. Sếp thử hỏi lại nhé.", false);
+            }
+        };
+
+        function drawChartInChat() {
+            const chatbox = document.getElementById('ai-chatbox');
+            const div = document.createElement('div');
+            div.className = "bg-slate-800 border border-slate-600 p-3 rounded-xl self-center w-[95%] md:w-[85%] shadow-lg mt-2 mb-2 relative";
+            const canvas = document.createElement('canvas');
+            canvas.id = 'chart-' + Date.now();
+            div.appendChild(canvas);
+            chatbox.appendChild(div);
+
+            const chotData = storeData.filter(s => s.status === 'chot' && s.date);
+            const dateCounts = {};
+            chotData.forEach(s => { dateCounts[s.date] = (dateCounts[s.date] || 0) + 1; });
+            
+            const sortedDates = Object.keys(dateCounts).sort();
+            const counts = sortedDates.map(d => dateCounts[d]);
+
+            if(sortedDates.length === 0) {
+                div.innerHTML = "<p class='text-sm text-amber-400 text-center py-4'><i class='fa-solid fa-triangle-exclamation'></i> Chưa có khách Lên Đơn trên bản đồ để vẽ.</p>";
+                chatbox.scrollTop = chatbox.scrollHeight;
+                return;
+            }
+
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: sortedDates.map(d => d.split('-').reverse().join('/')),
+                    datasets: [{
+                        label: 'Số Khách Lên Đơn',
+                        data: counts,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#10b981',
+                        pointRadius: 4,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#334155' }, beginAtZero: true },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155', display: false } }
+                    }
+                }
+            });
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        // ==========================================
         window.handleImageUpload = (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -436,7 +822,6 @@
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'huntkey_stores', docId), storeObj);
                 if(tempMarker) map.removeLayer(tempMarker);
                 window.clearForm();
-                // Bỏ lọc ngày sau khi lưu để có thể nhìn thấy điểm vừa thêm trong toàn bộ danh sách
                 window.switchTab('list');
             } catch (err) { window.showModal("Lỗi", "Tải lên thất bại.", "error"); } 
             finally { btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu Lên Cloud'; btn.disabled = false; }
@@ -462,10 +847,8 @@
                 if(currentMode !== 'add') window.switchTab('add');
                 window.placeTempMarker(e.latlng.lat, e.latlng.lng);
             });
-            // Loại bỏ dòng gán ngày mặc định cho bộ lọc để mặc định hiển thị TẤT CẢ
             document.getElementById('form-date').value = todayStr;
 
-            // KHỞI TẠO BỘ LỊCH BẬT LÊN
             flatpickr("#filter-date-range", {
                 mode: "range",
                 dateFormat: "Y-m-d",
@@ -532,45 +915,23 @@
             return '<span class="badge tu-choi">Từ chối</span>';
         }
 
-        // HÀM LẤY NGÀY LỌC TỪ LỊCH (Đã fix triệt để lỗi ngôn ngữ)
-        function getFilterDates() {
+        function getFilteredData() {
             const fp = document.getElementById('filter-date-range')._flatpickr;
-            // Nếu chưa chọn ngày nào
-            if (!fp || !fp.selectedDates || fp.selectedDates.length === 0) {
-                return { start: null, end: null };
+            let startDate = null, endDate = null;
+            
+            if (fp && fp.selectedDates && fp.selectedDates.length > 0) {
+                const formatYMD = (d) => {
+                    const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+                startDate = formatYMD(fp.selectedDates[0]);
+                endDate = formatYMD(fp.selectedDates.length > 1 ? fp.selectedDates[1] : fp.selectedDates[0]);
             }
             
-            // Lấy thẳng đối tượng Date từ bộ lịch
-            const startObj = fp.selectedDates[0];
-            const endObj = fp.selectedDates.length > 1 ? fp.selectedDates[1] : fp.selectedDates[0];
-            
-            // Ép format về chuẩn YYYY-MM-DD để so sánh với Database
-            const formatYMD = (d) => {
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${y}-${m}-${day}`;
-            };
-            
-            return { start: formatYMD(startObj), end: formatYMD(endObj) };
-        }
-
-        // NÚT BẤM LỌC
-        window.applyFilter = () => {
-            window.renderAll();
-        };
-
-        window.renderAll = () => {
-            if(!markersLayer) return;
-            markersLayer.clearLayers();
-            const listContainer = document.getElementById('store-list');
-            listContainer.innerHTML = '';
-            
-            const { start: startDate, end: endDate } = getFilterDates();
             const rawKeyword = document.getElementById('search-store-input').value.trim();
             const searchKeyword = removeVietnameseTones(rawKeyword);
             
-            let displayData = storeData.filter(s => {
+            return storeData.filter(s => {
                 let matchDate = true;
                 if (startDate && endDate) {
                     matchDate = s.date >= startDate && s.date <= endDate;
@@ -583,6 +944,19 @@
                 }
                 return matchDate && matchSearch;
             });
+        }
+
+        window.applyFilter = () => {
+            window.renderAll();
+        };
+
+        window.renderAll = () => {
+            if(!markersLayer) return;
+            markersLayer.clearLayers();
+            const listContainer = document.getElementById('store-list');
+            listContainer.innerHTML = '';
+            
+            let displayData = getFilteredData();
 
             document.getElementById('list-count').innerText = displayData.length;
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
@@ -628,6 +1002,9 @@
                     : `<div class="w-14 h-14 rounded bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center text-slate-500 mt-1" onclick="window.focusStore(${store.lat}, ${store.lng})"><i class="fa-solid fa-store text-xl"></i></div>`;
 
                 let displayStoreName = store.name;
+                const rawKeyword = document.getElementById('search-store-input').value.trim();
+                const searchKeyword = removeVietnameseTones(rawKeyword);
+
                 if(searchKeyword && store.name.toLowerCase().includes(searchKeyword)) {
                     const regex = new RegExp(`(${searchKeyword})`, 'gi');
                     displayStoreName = store.name.replace(regex, '<span class="bg-amber-500 text-slate-900 px-0.5 rounded">$1</span>');
@@ -790,42 +1167,39 @@
         window.drawHistoryRoute = () => {
             if (routeLine) { 
                 map.removeLayer(routeLine); routeLine = null; 
-                document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-route"></i> Vẽ Tuyến';
-                document.getElementById('btn-draw-history').className = "flex-1 bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600";
+                document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-route"></i> Nối Tuyến Đã Đi';
+                document.getElementById('btn-draw-history').className = "bg-slate-700 hover:bg-slate-600 text-amber-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600 shadow";
                 return; 
             }
             
-            const { start: startDate, end: endDate } = getFilterDates();
+            let dataToDraw = getFilteredData();
             
-            let dataToDraw = storeData;
-            if (startDate && endDate) {
-                dataToDraw = storeData.filter(s => s.date >= startDate && s.date <= endDate);
-            }
-            
-            dataToDraw = dataToDraw.filter(s => s.status === 'ghetham' || s.status === 'chot');
-            
-            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm Đã Ghé Thăm/Lên Đơn trong danh sách hiện tại để nối thành đường.", "warning");
+            if (dataToDraw.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm trong danh sách hiện tại để nối thành đường.", "warning");
             
             dataToDraw.sort((a,b) => a.id - b.id);
             routeLine = L.polyline(dataToDraw.map(s => [s.lat, s.lng]), { color: '#f59e0b', weight: 4, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(map);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
             
             document.getElementById('btn-draw-history').innerHTML = '<i class="fa-solid fa-eye-slash"></i> Tắt Tuyến';
-            document.getElementById('btn-draw-history').className = "flex-1 bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
+            document.getElementById('btn-draw-history').className = "bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
         };
 
         window.suggestRoute = () => {
             if (routeLine) { 
                 map.removeLayer(routeLine); routeLine = null; 
-                document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> AI Gợi Ý';
-                document.getElementById('btn-draw-suggest').className = "flex-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600";
+                document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-map-pin"></i> Tối Ưu Lộ Trình';
+                document.getElementById('btn-draw-suggest').className = "bg-slate-700 hover:bg-slate-600 text-fuchsia-400 py-1.5 rounded font-bold text-[10px] transition border border-slate-600 shadow";
                 return; 
             }
-            let oldCustomers = storeData.filter(s => s.status === 'chot' && s.date !== todayStr);
-            if (oldCustomers.length < 2) return window.showModal("Cảnh báo", "Không đủ Khách Cũ để tính toán.", "warning");
+            
+            // Lấy toàn bộ các điểm đang hiển thị (có tọa độ hợp lệ)
+            let unvisited = getFilteredData().filter(s => s.lat && s.lng);
+            
+            if (unvisited.length < 2) return window.showModal("Cảnh báo", "Cần ít nhất 2 điểm đang hiện trên danh sách để AI tính toán lộ trình tối ưu khoảng cách.", "warning");
 
-            let unvisited = [...oldCustomers], route = [], current = unvisited.shift(); 
+            let route = [], current = unvisited.shift(); 
             route.push(current);
+
             while(unvisited.length > 0) {
                 let closestIdx = 0, minDist = Infinity, curLL = L.latLng(current.lat, current.lng);
                 for(let i=0; i<unvisited.length; i++) {
@@ -835,13 +1209,15 @@
                 current = unvisited.splice(closestIdx, 1)[0];
                 route.push(current);
             }
+            
             routeLine = L.polyline(route.map(s => [s.lat, s.lng]), { color: '#d946ef', weight: 4, opacity: 0.9, lineJoin: 'round' }).addTo(map);
             let dashOffset = 0; setInterval(() => { if(routeLine) { dashOffset -= 10; routeLine.setStyle({ dashOffset }); } }, 50);
             map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            window.showModal("AI Suggest", `Lộ trình cho ${route.length} khách cũ.`, "success");
             
-            document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-eraser"></i> Xóa Gợi Ý';
-            document.getElementById('btn-draw-suggest').className = "flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
+            window.showModal("Tối Ưu Tuyến Thành Công", `Đã nối đường đi ngắn nhất cho <b class="text-fuchsia-400">${route.length} điểm</b> đang hiển thị trên bản đồ.`, "success");
+            
+            document.getElementById('btn-draw-suggest').innerHTML = '<i class="fa-solid fa-eraser"></i> Xóa Tuyến AI';
+            document.getElementById('btn-draw-suggest').className = "bg-fuchsia-600 hover:bg-fuchsia-500 text-white py-1.5 rounded font-bold text-[10px] transition shadow";
         };
 
         window.onload = bootSystem;
